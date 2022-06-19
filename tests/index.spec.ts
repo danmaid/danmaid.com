@@ -34,3 +34,9 @@ it('PUT / でイベントを登録できること', async () => {
 it('WebSocket 経由でイベントを受信できること', async () => {
   expect(messages).toContainEqual(event)
 })
+
+it('GET / でイベントを取得できること', async () => {
+  const res = await fetch('http://localhost:8520')
+  expect(res.status).toBe(200)
+  await expect(res.json()).resolves.toContainEqual(event)
+})
