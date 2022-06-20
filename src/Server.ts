@@ -30,6 +30,14 @@ export class Server extends http.Server {
       res.end(JSON.stringify(this.events))
       return
     }
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': '*',
+      })
+      res.end()
+      return
+    }
     res.writeHead(501).end()
   }
 
