@@ -34,6 +34,7 @@ export class Server extends http.Server {
       res.writeHead(204, {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': '*',
+        'Access-Control-Allow-Methods': '*',
       })
       res.end()
       return
