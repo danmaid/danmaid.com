@@ -25,7 +25,7 @@ export class Server extends http.Server {
       res.writeHead(200).end()
       return
     }
-    if (req.method === 'GET') {
+    if (req.method === 'GET' && req.url?.endsWith('.json')) {
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify(this.events))
       return

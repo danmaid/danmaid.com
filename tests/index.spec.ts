@@ -35,8 +35,9 @@ it('WebSocket 経由でイベントを受信できること', async () => {
   expect(messages).toContainEqual(event)
 })
 
-it('GET / でイベントを取得できること', async () => {
-  const res = await fetch('http://localhost:8520')
+it('GET かつ URL の最後が .json の場合、 json 形式でデータを取得できること', async () => {
+  const res = await fetch('http://localhost:8520/events.json')
   expect(res.status).toBe(200)
+  expect(res.headers.get('content-type')).toBe('application/json')
   await expect(res.json()).resolves.toContainEqual(event)
 })

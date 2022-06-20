@@ -16,12 +16,10 @@ export class DevServer extends Server {
   }
 
   async onrequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    if (req.method === 'GET' && !req.headers.accept?.split(',').some((v) => /application\/json/.test(v))) {
-      await this.vite
-      this.app(req, res)
-      return
-    }
     await super.onrequest(req, res)
+    if (res.headersSent) return
+    await this.vite
+    this.app(req, res)
   }
 
   close(callback?: ((err?: Error | undefined) => void) | undefined): this {

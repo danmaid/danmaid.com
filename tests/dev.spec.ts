@@ -18,15 +18,14 @@ it('PUT / でイベントを登録できること', async () => {
   expect(res.status).toBe(200)
 })
 
-it('GET / with Accept: application/json でイベントを取得できること', async () => {
-  const headers = new Headers({ Accept: 'application/json' })
-  const res = await fetch('http://localhost:8521', { headers })
+it('GET かつ URL の最後が .json の場合、 json 形式でデータを取得できること', async () => {
+  const res = await fetch('http://localhost:8521/events.json')
   expect(res.status).toBe(200)
   expect(res.headers.get('content-type')).toBe('application/json')
   await expect(res.json()).resolves.toContainEqual(event)
 })
 
-it('GET / で HTML コンテンツを取得できること', async () => {
+it('GET で HTML コンテンツを取得できること', async () => {
   const res = await fetch('http://localhost:8521')
   expect(res.status).toBe(200)
   expect(res.headers.get('content-type')).toBe('text/html')
