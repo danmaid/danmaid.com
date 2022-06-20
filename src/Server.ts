@@ -22,7 +22,7 @@ export class Server extends http.Server {
     if (req.method === 'PUT') {
       this.events.push(JSON.parse(body))
       this.wss.clients.forEach((ws) => ws.send(body))
-      res.writeHead(200).end()
+      res.writeHead(200, { 'Access-Control-Allow-Origin': '*' }).end()
       return
     }
     if (req.method === 'GET' && req.url?.endsWith('.json')) {
