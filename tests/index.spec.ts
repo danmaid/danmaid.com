@@ -9,8 +9,6 @@ afterAll(async () => {
 })
 
 it('TCP:8520 で待ち受けること', async () => {
-  await expect(checkListening(8520)).resolves.toBe(false)
-  server.listen(8520)
   await expect(checkListening(8520)).resolves.toBe(true)
 })
 

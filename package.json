@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "dev": "ts-node src/dev"
+    "dev": "ts-node src/dev",
+    "build": "tsc",
+    "serve": "node dist"
   },
   "repository": {
     "type": "git",
