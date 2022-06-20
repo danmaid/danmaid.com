@@ -30,6 +30,7 @@ export class Server extends http.Server {
       res.end(JSON.stringify(this.events))
       return
     }
+    res.writeHead(501).end()
   }
 
   close(callback?: ((err?: Error | undefined) => void) | undefined): this {
