@@ -39,7 +39,7 @@ export class Server extends http.Server {
       res.end()
       return
     }
-    res.writeHead(501).end()
+    // res.writeHead(501).end()
   }
 
   close(callback?: ((err?: Error | undefined) => void) | undefined): this {
