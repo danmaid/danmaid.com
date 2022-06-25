@@ -7,9 +7,14 @@ import morgan from 'morgan'
 import path from 'path'
 import fs from 'fs'
 
+interface Item {
+  id?: string
+  links?: string[]
+}
+
 export class Server extends http.Server {
   wss = new WebSocket.Server({ server: this })
-  events: { links?: string[] }[] = []
+  items: Item[] = []
   clients: Socket[] = []
   app
 
@@ -22,6 +27,7 @@ export class Server extends http.Server {
     app.use(express.static('./packages/web/dist'))
     app.get('*.json', (req, res) => this.onGET(req, res))
     app.put('*', (req, res) => this.onPUT(req, res))
+    app.patch('/:id', (req, res) => this.onPATCH(req, res))
     const indexFile = path.resolve('./packages/web/dist/index.html')
     try {
       fs.accessSync(indexFile, fs.constants.R_OK)
@@ -35,16 +41,23 @@ export class Server extends http.Server {
   }
 
   async onPUT({ body }: express.Request, res: express.Response) {
-    this.events.push(body)
+    this.items.push(body)
     this.wss.clients.forEach((ws) => ws.send(JSON.stringify(body)))
-    res.setHeader('Access-Control-Allow-Origin', '*')
     res.sendStatus(200)
   }
 
   async onGET({ query }: express.Request, res: express.Response) {
     const links = query.links
-    const events = typeof links === 'string' ? this.events.filter((v) => v.links?.includes(links)) : this.events
-    res.json(events)
+    const items = typeof links === 'string' ? this.items.filter((v) => v.links?.includes(links)) : this.items
+    res.json(items)
+  }
+
+  async onPATCH({ params, body }: express.Request<{ id: string }>, res: express.Response) {
+    const item = this.items.find((v) => v.id === params.id)
+    if (!item) return res.sendStatus(404)
+    Object.assign(item, body)
+    this.wss.clients.forEach((ws) => ws.send(JSON.stringify(item)))
+    res.sendStatus(200)
   }
 
   close(callback?: ((err?: Error | undefined) => void) | undefined): this {

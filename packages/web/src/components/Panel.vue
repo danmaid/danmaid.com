@@ -48,7 +48,7 @@ export default defineComponent({
       handler: 'load',
       immediate: true,
     },
-    selectedIndex(v?: number) {
+    async selectedIndex(v?: number) {
       const selected = v === undefined || v < 0 ? undefined : this.items[v].id
       this.$emit('update:selected', selected)
     },
@@ -78,9 +78,18 @@ export default defineComponent({
       if (i !== this.selectedIndex) return undefined
       return { backgroundColor: 'cyan' }
     },
-    select(i: number) {
+    async select(i: number) {
+      if (this.selectedIndex !== undefined) {
+        await this.updateStatus(this.items[this.selectedIndex].id, { active: null })
+      }
       if (this.selectedIndex === i) return (this.selectedIndex = undefined)
+      await this.updateStatus(this.items[i].id, { active: true })
       this.selectedIndex = i
+    },
+    async updateStatus(id: string, status: { active: boolean | null }) {
+      const headers = new Headers({ 'Content-Type': 'application/json' })
+      const body = JSON.stringify(status)
+      await fetch(`/${id}`, { method: 'PATCH', headers, body })
     },
   },
 })
