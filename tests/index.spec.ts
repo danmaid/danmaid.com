@@ -2,6 +2,13 @@ import { server } from '../src/index'
 import { checkListening } from './utils'
 import fetch, { Headers } from 'node-fetch'
 import WebSocket from 'ws'
+import { RequestHandler } from 'express'
+
+jest.mock('morgan', () => (): RequestHandler => (req, res, next) => next())
+
+beforeAll(async () => {
+  console.log = jest.fn()
+})
 
 afterAll(async () => {
   ws?.close()

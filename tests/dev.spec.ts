@@ -1,6 +1,13 @@
 import { server } from '../src/dev'
 import { checkListening } from './utils'
 import fetch, { Headers } from 'node-fetch'
+import { RequestHandler } from 'express'
+
+jest.mock('morgan', () => (): RequestHandler => (req, res, next) => next())
+
+beforeAll(async () => {
+  console.log = jest.fn()
+})
 
 afterAll(async () => {
   await new Promise((r) => server.close(r))
