@@ -14,7 +14,7 @@ interface Item {
 
 export class Server extends http.Server {
   wss = new WebSocket.Server({ server: this })
-  items: Item[] = []
+  items = new Map<string, unknown>()
   clients: Socket[] = []
   app
 
@@ -25,9 +25,10 @@ export class Server extends http.Server {
     app.use(express.json())
     app.use(cors())
     app.use(express.static('./packages/web/dist'))
-    app.get('*.json', (req, res) => this.onGET(req, res))
-    app.put('*', (req, res) => this.onPUT(req, res))
-    app.patch('/:id', (req, res) => this.onPATCH(req, res))
+    app.get(/\/(index)?.json$/, (req, res, next) => this.onGETIndex(req, res, next))
+    app.get('*.json', (req, res, next) => this.onGET(req, res, next))
+    app.put('*', (req, res, next) => this.onPUT(req, res, next))
+    app.patch('*', (req, res, next) => this.onPATCH(req, res, next))
     const indexFile = path.resolve('./packages/web/dist/index.html')
     try {
       fs.accessSync(indexFile, fs.constants.R_OK)
@@ -40,21 +41,36 @@ export class Server extends http.Server {
     this.app = app
   }
 
-  async onPUT({ body }: express.Request, res: express.Response) {
-    this.items.push(body)
-    this.wss.clients.forEach((ws) => ws.send(JSON.stringify(body)))
+  onPUT: express.RequestHandler = async ({ body, path }, res) => {
+    this.items.set(path, body)
+    this.wss.clients.forEach((ws) => ws.send(JSON.stringify({ path, body })))
     res.sendStatus(200)
   }
 
-  async onGET({ query }: express.Request, res: express.Response) {
-    const links = query.links
-    const items = typeof links === 'string' ? this.items.filter((v) => v.links?.includes(links)) : this.items
-    res.json(items)
+  onGETIndex: express.RequestHandler = async ({ query, path }, res) => {
+    const items = Array.from(this.items)
+      .filter(([k]) => k.startsWith(path.replace(/(index)?\.json$/, '')))
+      .map(([, v]) => v)
+    if (Object.keys(query).length < 1) return res.json(items)
+
+    const objects = items.filter((v): v is Record<string, unknown> => typeof v === 'object')
+    const filtered = Object.entries(query).reduce((acc, [k, v]) => {
+      return acc.filter((item) => {
+        const value = item[k]
+        return Array.isArray(value) ? value.includes(v) : value === v
+      })
+    }, objects)
+    res.json(filtered)
   }
 
-  async onPATCH({ params, body }: express.Request<{ id: string }>, res: express.Response) {
-    const item = this.items.find((v) => v.id === params.id)
-    if (!item) return res.sendStatus(404)
+  onGET: express.RequestHandler = async ({ path }, res) => {
+    const item = this.items.get(path.replace(/(index)?\.json$/, ''))
+    item !== undefined ? res.json(item) : res.sendStatus(404)
+  }
+
+  onPATCH: express.RequestHandler = async ({ path, body }, res) => {
+    const item = this.items.get(path)
+    if (!item || typeof item !== 'object') return res.sendStatus(404)
     Object.assign(item, body)
     this.wss.clients.forEach((ws) => ws.send(JSON.stringify(item)))
     res.sendStatus(200)

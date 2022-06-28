@@ -26,7 +26,7 @@ it('PUT / でイベントを登録できること', async () => {
 })
 
 it('GET かつ URL の最後が .json の場合、 json 形式でデータを取得できること', async () => {
-  const res = await fetch('http://localhost:8521/events.json')
+  const res = await fetch('http://localhost:8521/.json')
   expect(res.status).toBe(200)
   expect(res.headers.get('content-type')).toMatch('application/json')
   await expect(res.json()).resolves.toContainEqual(event)
