@@ -72,7 +72,7 @@ export default defineComponent({
       const item: Item = { id: uuid(), title: this.title }
       if (this.parent) item.links = [this.parent]
       const body = JSON.stringify(item)
-      await fetch('/', { method: 'PUT', headers, body })
+      await fetch(`/${item.id}`, { method: 'PUT', headers, body })
     },
     getStyle(i: number) {
       if (i !== this.selectedIndex) return undefined
