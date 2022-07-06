@@ -6,15 +6,11 @@ import cors from 'cors'
 import morgan from 'morgan'
 import path from 'path'
 import fs from 'fs'
-
-interface Item {
-  id?: string
-  links?: string[]
-}
+import { FileStore } from './FileStore'
 
 export class Server extends http.Server {
   wss = new WebSocket.Server({ server: this })
-  items = new Map<string, unknown>()
+  items = new FileStore<string, unknown>()
   clients: Socket[] = []
   app
 
@@ -42,7 +38,7 @@ export class Server extends http.Server {
   }
 
   onPUT: express.RequestHandler = async ({ body, path }, res) => {
-    this.items.set(path, body)
+    await this.items.set(path, body)
     this.wss.clients.forEach((ws) => ws.send(JSON.stringify({ path, body })))
     res.sendStatus(200)
   }
@@ -64,16 +60,24 @@ export class Server extends http.Server {
   }
 
   onGET: express.RequestHandler = async ({ path }, res) => {
-    const item = this.items.get(path.replace(/(index)?\.json$/, ''))
-    item !== undefined ? res.json(item) : res.sendStatus(404)
+    try {
+      const item = await this.items.get(path.replace(/(index)?\.json$/, ''))
+      res.json(item)
+    } catch (err) {
+      res.sendStatus(404)
+    }
   }
 
   onPATCH: express.RequestHandler = async ({ path, body }, res) => {
-    const item = this.items.get(path)
-    if (!item || typeof item !== 'object') return res.sendStatus(404)
-    Object.assign(item, body)
-    this.wss.clients.forEach((ws) => ws.send(JSON.stringify(item)))
-    res.sendStatus(200)
+    try {
+      const item = await this.items.get(path)
+      if (!item || typeof item !== 'object') throw Error('Invalid item.')
+      await this.items.set(path, Object.assign(item, body))
+      this.wss.clients.forEach((ws) => ws.send(JSON.stringify(item)))
+      res.sendStatus(200)
+    } catch (err) {
+      res.sendStatus(404)
+    }
   }
 
   close(callback?: ((err?: Error | undefined) => void) | undefined): this {
