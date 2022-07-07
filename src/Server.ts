@@ -4,25 +4,33 @@ import { Socket } from 'net'
 import express from 'express'
 import cors from 'cors'
 import morgan from 'morgan'
-import path from 'path'
+import path, { join, dirname } from 'path'
 import fs from 'fs'
-import { FileStore } from './FileStore'
+import { writeFile, mkdir, readFile, readdir } from 'fs/promises'
+
+const dataDir = './data'
 
 export class Server extends http.Server {
   wss = new WebSocket.Server({ server: this })
-  items = new FileStore<string, unknown>()
+  items = new Map<string, unknown>()
   clients: Socket[] = []
   app
 
   constructor() {
     super()
+    fs.mkdirSync(dataDir, { recursive: true })
     const app = express()
     app.use(morgan('combined'))
     app.use(express.json())
     app.use(cors())
     app.use(express.static('./packages/web/dist'))
+    app.use(
+      express.static(dataDir, {
+        setHeaders: (res) => res.setHeader('Content-Type', 'application/json'),
+        index: false,
+      })
+    )
     app.get(/\/(index)?.json$/, (req, res, next) => this.onGETIndex(req, res, next))
-    app.get('*.json', (req, res, next) => this.onGET(req, res, next))
     app.put('*', (req, res, next) => this.onPUT(req, res, next))
     app.patch('*', (req, res, next) => this.onPATCH(req, res, next))
     const indexFile = path.resolve('./packages/web/dist/index.html')
@@ -37,18 +45,16 @@ export class Server extends http.Server {
     this.app = app
   }
 
-  onPUT: express.RequestHandler = async ({ body, path }, res) => {
-    await this.items.set(path, body)
-    this.wss.clients.forEach((ws) => ws.send(JSON.stringify({ path, body })))
-    res.sendStatus(200)
-  }
-
   onGETIndex: express.RequestHandler = async ({ query, path }, res) => {
-    const items = Array.from(this.items)
-      .filter(([k]) => k.startsWith(path.replace(/(index)?\.json$/, '')))
-      .map(([, v]) => v)
-    if (Object.keys(query).length < 1) return res.json(items)
-
+    const dir = dirname(join(dataDir, path))
+    const infos = await readdir(dir, { withFileTypes: true })
+    const contents = infos
+      .filter((v) => v.isFile())
+      .map(async ({ name }) => {
+        const data = await readFile(join(dir, name), { encoding: 'utf-8' })
+        return JSON.parse(data)
+      })
+    const items = await Promise.all(contents)
     const objects = items.filter((v): v is Record<string, unknown> => typeof v === 'object')
     const filtered = Object.entries(query).reduce((acc, [k, v]) => {
       return acc.filter((item) => {
@@ -59,26 +65,33 @@ export class Server extends http.Server {
     res.json(filtered)
   }
 
-  onGET: express.RequestHandler = async ({ path }, res) => {
-    try {
-      const item = await this.items.get(path.replace(/(index)?\.json$/, ''))
-      res.json(item)
-    } catch (err) {
-      res.sendStatus(404)
-    }
+  onPUT: express.RequestHandler = async ({ body, path, headers }, res, next) => {
+    if (!headers['content-type']?.includes('json')) return next()
+    const file = join(dataDir, path + '.json')
+    await mkdir(dirname(file), { recursive: true })
+    await writeFile(file, JSON.stringify(body), { encoding: 'utf-8' })
+    await this.updateIndex(file)
+    this.wss.clients.forEach((ws) => ws.send(JSON.stringify({ path, body })))
+    res.sendStatus(200)
   }
 
   onPATCH: express.RequestHandler = async ({ path, body }, res) => {
     try {
-      const item = await this.items.get(path)
+      const file = join(dataDir, path + '.json')
+      const data = await readFile(file, { encoding: 'utf-8' })
+      const item = JSON.parse(data)
       if (!item || typeof item !== 'object') throw Error('Invalid item.')
-      await this.items.set(path, Object.assign(item, body))
+      Object.assign(item, body)
+      await writeFile(file, JSON.stringify(item), { encoding: 'utf-8' })
+      await this.updateIndex(file)
       this.wss.clients.forEach((ws) => ws.send(JSON.stringify(item)))
       res.sendStatus(200)
     } catch (err) {
       res.sendStatus(404)
     }
   }
+
+  async updateIndex(path: string) {}
 
   close(callback?: ((err?: Error | undefined) => void) | undefined): this {
     this.clients.forEach((v) => v.destroy())

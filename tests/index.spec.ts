@@ -29,15 +29,15 @@ it('WebSocket で接続できること', async () => {
 })
 
 const item = { test: 'test' }
-it('PUT /hoge/fuga でアイテムを登録できること', async () => {
+it('PUT /hoge でアイテムを登録できること', async () => {
   const headers = new Headers({ 'Content-Type': 'application/json' })
   const body = JSON.stringify(item)
-  const res = await fetch('http://localhost:8520/hoge/fuga', { method: 'PUT', headers, body })
+  const res = await fetch('http://localhost:8520/hoge', { method: 'PUT', headers, body })
   expect(res.status).toBe(200)
 })
 
 it('WebSocket 経由でイベントを受信できること', async () => {
-  expect(messages).toContainEqual({ body: item, path: '/hoge/fuga' })
+  expect(messages).toContainEqual({ body: item, path: '/hoge' })
 })
 
 it('GET /.json で一覧を取得できること', async () => {
@@ -58,8 +58,8 @@ it('GET /index.json で一覧を取得できること', async () => {
   expect(data).toContainEqual(item)
 })
 
-it('GET /hoge/fuga.json で /hoge/fuga アイテムを取得できること', async () => {
-  const res = await fetch('http://localhost:8520/hoge/fuga.json')
+it('GET /hoge.json で /hoge/fuga アイテムを取得できること', async () => {
+  const res = await fetch('http://localhost:8520/hoge.json')
   expect(res.status).toBe(200)
   expect(res.headers.get('content-type')).toMatch('application/json')
   const data = await res.json()
@@ -75,10 +75,10 @@ it('GET で HTML コンテンツを取得できること', async () => {
 it('PATCH で既存データの一部を変更できること', async () => {
   const headers = new Headers({ 'Content-Type': 'application/json' })
   const body = JSON.stringify({ add: 'modified' })
-  const res = await fetch('http://localhost:8520/hoge/fuga', { method: 'PATCH', headers, body })
+  const res = await fetch('http://localhost:8520/hoge', { method: 'PATCH', headers, body })
   expect(res.status).toBe(200)
 
-  const get = await fetch('http://localhost:8520/hoge/fuga.json')
+  const get = await fetch('http://localhost:8520/hoge.json')
   await expect(get.json()).resolves.toStrictEqual({ ...item, add: 'modified' })
 })
 
