@@ -12,7 +12,6 @@ const dataDir = './data'
 
 export class Server extends http.Server {
   wss = new WebSocket.Server({ server: this })
-  items = new Map<string, unknown>()
   clients: Socket[] = []
   app
 
