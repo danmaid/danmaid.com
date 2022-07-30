@@ -7,6 +7,7 @@ import morgan from 'morgan'
 import path, { join, dirname } from 'path'
 import fs from 'fs'
 import { writeFile, mkdir, readFile, readdir } from 'fs/promises'
+import { v4 as uuid } from 'uuid'
 
 const dataDir = './data'
 
@@ -21,7 +22,6 @@ export class Server extends http.Server {
     const app = express()
     app.use(morgan('combined'))
     app.use(express.json())
-    app.use(cors())
     app.use(express.static('./packages/web/dist'))
     app.use(
       express.static(dataDir, {
@@ -41,6 +41,21 @@ export class Server extends http.Server {
     }
     this.on('request', app)
     this.on('connection', (socket) => this.clients.push(socket))
+    this.on('connection', (socket: Socket & { id?: string }) => {
+      socket.id = uuid()
+      const { remoteFamily, remoteAddress, remotePort } = socket
+      console.log(new Date(), 'connection opened.', socket.id, remoteFamily, remoteAddress, remotePort)
+      socket.on('close', (hadError) => {
+        console.log(new Date(), 'connection closed.', socket.id, hadError)
+      })
+    })
+    this.on('request', (req: http.IncomingMessage & { id?: string; socket: Socket & { id?: string } }, res) => {
+      req.id = uuid()
+      console.log(new Date(), 'request opened.', req.id, req.socket.id)
+      req.on('close', () => {
+        console.log(new Date(), 'request closed.', req.id)
+      })
+    })
     this.app = app
   }
 
