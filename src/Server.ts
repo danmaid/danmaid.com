@@ -7,6 +7,8 @@ import morgan from 'morgan'
 import path, { join, dirname } from 'path'
 import fs from 'fs'
 import { writeFile, mkdir, readFile, readdir } from 'fs/promises'
+import { v4 as uuid } from 'uuid'
+import { EventEmitter } from 'events'
 
 const dataDir = './data'
 
@@ -14,14 +16,25 @@ export class Server extends http.Server {
   wss = new WebSocket.Server({ server: this })
   clients: Socket[] = []
   app
+  events = new EventEmitter()
 
   constructor() {
     super()
     fs.mkdirSync(dataDir, { recursive: true })
+    // connection management
+    this.on('connection', (socket) => this.clients.push(socket))
+    // request management
+    this.on('request', (req: http.IncomingMessage & { id?: string }) => {
+      req.id = uuid()
+      const { url, method, headers, id } = req
+      this.events.emit('request', uuid(), { id, url, method, headers })
+    })
+    // main application
     const app = express()
     app.use(morgan('combined'))
-    app.use(express.json())
     app.use(cors())
+    app.get('*', this.onSSE)
+    app.use(express.json())
     app.use(express.static('./packages/web/dist'))
     app.use(
       express.static(dataDir, {
@@ -40,7 +53,6 @@ export class Server extends http.Server {
       console.log('index.html not found.', indexFile)
     }
     this.on('request', app)
-    this.on('connection', (socket) => this.clients.push(socket))
     this.app = app
   }
 
@@ -88,6 +100,19 @@ export class Server extends http.Server {
     } catch (err) {
       res.sendStatus(404)
     }
+  }
+
+  onSSE: express.RequestHandler = async (req, res, next) => {
+    if (!req.accepts().includes('text/event-stream')) return next()
+    console.log('it is SSE!!')
+    res.setHeader('Cache-Control', 'no-store')
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.flushHeaders()
+    this.events.on('request', (id, data) => {
+      res.write('event: request\n')
+      res.write(`id: ${id}\n`)
+      res.write(`data: ${JSON.stringify(data)}\n\n`)
+    })
   }
 
   async updateIndex(path: string) {}
