@@ -24,10 +24,14 @@ export class Server extends http.Server {
     // connection management
     this.on('connection', (socket) => this.clients.push(socket))
     // request management
-    this.on('request', (req: http.IncomingMessage & { id?: string }) => {
+    fs.mkdirSync(path.join(dataDir, 'events'), { recursive: true })
+    this.on('request', async (req: http.IncomingMessage & { id?: string }) => {
       req.id = uuid()
       const { url, method, headers, id } = req
-      this.events.emit('request', uuid(), { id, url, method, headers })
+      const body = { id, url, method, headers }
+      const file = join(dataDir, 'events', id + '.json')
+      await writeFile(file, JSON.stringify(body), { encoding: 'utf-8' })
+      this.events.emit('request', uuid(), body)
     })
     // main application
     const app = express()
@@ -58,22 +62,26 @@ export class Server extends http.Server {
 
   onGETIndex: express.RequestHandler = async ({ query, path }, res) => {
     const dir = dirname(join(dataDir, path))
-    const infos = await readdir(dir, { withFileTypes: true })
-    const contents = infos
-      .filter((v) => v.isFile())
-      .map(async ({ name }) => {
-        const data = await readFile(join(dir, name), { encoding: 'utf-8' })
-        return JSON.parse(data)
-      })
-    const items = await Promise.all(contents)
-    const objects = items.filter((v): v is Record<string, unknown> => typeof v === 'object')
-    const filtered = Object.entries(query).reduce((acc, [k, v]) => {
-      return acc.filter((item) => {
-        const value = item[k]
-        return Array.isArray(value) ? value.includes(v) : value === v
-      })
-    }, objects)
-    res.json(filtered)
+    try {
+      const infos = await readdir(dir, { withFileTypes: true })
+      const contents = infos
+        .filter((v) => v.isFile())
+        .map(async ({ name }) => {
+          const data = await readFile(join(dir, name), { encoding: 'utf-8' })
+          return JSON.parse(data)
+        })
+      const items = await Promise.all(contents)
+      const objects = items.filter((v): v is Record<string, unknown> => typeof v === 'object')
+      const filtered = Object.entries(query).reduce((acc, [k, v]) => {
+        return acc.filter((item) => {
+          const value = item[k]
+          return Array.isArray(value) ? value.includes(v) : value === v
+        })
+      }, objects)
+      res.json(filtered)
+    } catch (err) {
+      res.sendStatus(404)
+    }
   }
 
   onPUT: express.RequestHandler = async ({ body, path, headers }, res, next) => {
