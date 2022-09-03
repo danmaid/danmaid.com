@@ -6,11 +6,13 @@ import cors from 'cors'
 import morgan from 'morgan'
 import path, { join, dirname } from 'path'
 import fs from 'fs'
-import { writeFile, mkdir, readFile, readdir } from 'fs/promises'
+import { writeFile, mkdir, readFile, readdir, appendFile } from 'fs/promises'
 import { v4 as uuid } from 'uuid'
 import { EventEmitter } from 'events'
 
 const dataDir = './data'
+
+type RequestEvent = { id: string; url?: string; method?: string; headers: http.IncomingHttpHeaders }
 
 export class Server extends http.Server {
   wss = new WebSocket.Server({ server: this })
@@ -28,17 +30,19 @@ export class Server extends http.Server {
     this.on('request', async (req: http.IncomingMessage & { id?: string }) => {
       req.id = uuid()
       const { url, method, headers, id } = req
-      const body = { id, url, method, headers }
+      const body: RequestEvent = { id, url, method, headers }
       const file = join(dataDir, 'events', id + '.json')
       await writeFile(file, JSON.stringify(body), { encoding: 'utf-8' })
       this.events.emit('request', uuid(), body)
     })
+    this.events.on('request', (id, body) => this.onRequest(id, body))
     // main application
     const app = express()
     app.use(morgan('combined'))
     app.use(cors())
     app.get('*', this.onSSE)
     app.use(express.json())
+    app.get(/events\/(index)?.json$/, (req, res) => res.json(this.eventsIndex))
     app.use(express.static('./packages/web/dist'))
     app.use(
       express.static(dataDir, {
@@ -121,6 +125,15 @@ export class Server extends http.Server {
       res.write(`id: ${id}\n`)
       res.write(`data: ${JSON.stringify(data)}\n\n`)
     })
+  }
+
+  eventsIndex: RequestEvent[] = new Array(25)
+  // 'request' event handler
+  async onRequest(_: unknown, body: RequestEvent) {
+    this.eventsIndex.unshift(body)
+    this.eventsIndex.pop()
+    const file = join(dataDir, 'events', 'index.json')
+    appendFile(file, JSON.stringify(body) + '\n')
   }
 
   async updateIndex(path: string) {}
