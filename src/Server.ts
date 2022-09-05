@@ -41,7 +41,6 @@ export class Server extends http.Server {
     app.use(morgan('combined'))
     app.use(cors())
     app.get('*', this.onSSE)
-    app.use(express.json())
     app.get(/events\/(index)?.json$/, (req, res) => res.json(this.eventsIndex))
     app.use(express.static('./packages/web/dist'))
     app.use(
@@ -52,6 +51,7 @@ export class Server extends http.Server {
     )
     app.get(/\/(index)?.json$/, (req, res, next) => this.onGETIndex(req, res, next))
     app.put('*', (req, res, next) => this.onPUT(req, res, next))
+    app.use(express.json())
     app.patch('*', (req, res, next) => this.onPATCH(req, res, next))
     const indexFile = path.resolve('./packages/web/dist/index.html')
     try {
@@ -88,14 +88,13 @@ export class Server extends http.Server {
     }
   }
 
-  onPUT: express.RequestHandler = async ({ body, path, headers }, res, next) => {
-    if (!headers['content-type']?.includes('json')) return next()
-    const file = join(dataDir, path + '.json')
-    await mkdir(dirname(file), { recursive: true })
-    await writeFile(file, JSON.stringify(body), { encoding: 'utf-8' })
-    await this.updateIndex(file)
-    this.wss.clients.forEach((ws) => ws.send(JSON.stringify({ path, body })))
-    res.sendStatus(200)
+  onPUT: express.RequestHandler = async (req, res, next) => {
+    const file = path.join(dataDir, req.path)
+    await mkdir(path.dirname(file), { recursive: true })
+    const stream = fs.createWriteStream(file)
+    req.pipe(stream)
+    stream.on('finish', () => res.sendStatus(200))
+    this.updateIndex(file)
   }
 
   onPATCH: express.RequestHandler = async ({ path, body }, res) => {
