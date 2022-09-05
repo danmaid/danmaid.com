@@ -43,12 +43,16 @@ export class Server extends http.Server {
     app.get('*', this.onSSE)
     app.get(/events\/(index)?.json$/, (req, res) => res.json(this.eventsIndex))
     app.use(express.static('./packages/web/dist'))
-    app.use(
-      express.static(dataDir, {
-        setHeaders: (res) => res.setHeader('Content-Type', 'application/json'),
-        index: false,
-      })
-    )
+    const sendStatic = express.static(dataDir)
+    app.use((req, res, next) => {
+      // ファイルが存在しても、 Accept ヘッダーで q=1 による許可がない場合、送信しない
+      req.headers.accept = req.headers.accept
+        ?.split(',')
+        .filter((v) => !/;q=0/.test(v))
+        .join(',')
+      const mediaType = express.static.mime.lookup(path.join(dataDir, req.path))
+      req.accepts(mediaType) ? sendStatic(req, res, next) : next()
+    })
     app.get(/\/(index)?.json$/, (req, res, next) => this.onGETIndex(req, res, next))
     app.put('*', (req, res, next) => this.onPUT(req, res, next))
     app.use(express.json())
