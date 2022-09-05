@@ -5,8 +5,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/events', component: () => import('./views/Events.vue') },
-    { path: '/:id+', component: () => import('./views/Now.vue') },
+    // { path: '/events', component: () => import('./views/Events.vue') },
+    // { path: '/:id+', component: () => import('./views/Now.vue') },
   ],
 })
 

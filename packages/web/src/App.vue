@@ -14,10 +14,18 @@
     </table>
   </div>
   <router-view></router-view>
+  <hr />
+  <GET></GET>
+  <hr />
+  <PUT></PUT>
+  <hr />
+  <div>{{ $route }}</div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
+import PUT from './components/PUT.vue'
+import GET from './components/GET.vue'
 
 export default defineComponent({
   data() {
@@ -38,6 +46,7 @@ export default defineComponent({
       this.histories = await res.json()
     },
   },
+  components: { PUT, GET },
 })
 </script>
 
