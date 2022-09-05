@@ -97,7 +97,10 @@ export class Server extends http.Server {
     await mkdir(path.dirname(file), { recursive: true })
     const stream = fs.createWriteStream(file)
     req.pipe(stream)
-    stream.on('finish', () => res.sendStatus(200))
+    stream.on('finish', () => {
+      this.events.emit('stored', { path: req.path, type: req.headers['content-type'] })
+      res.sendStatus(200)
+    })
     this.updateIndex(file)
   }
 
@@ -126,6 +129,10 @@ export class Server extends http.Server {
     this.events.on('request', (id, data) => {
       res.write('event: request\n')
       res.write(`id: ${id}\n`)
+      res.write(`data: ${JSON.stringify(data)}\n\n`)
+    })
+    this.events.on('stored', (data) => {
+      res.write('event: stored\n')
       res.write(`data: ${JSON.stringify(data)}\n\n`)
     })
   }
