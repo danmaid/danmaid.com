@@ -1,31 +1,14 @@
 import { server } from '../src/index'
 import { checkListening } from './utils'
 import fetch, { Headers } from 'node-fetch'
-import WebSocket from 'ws'
 import { RequestHandler } from 'express'
 
 jest.mock('morgan', () => (): RequestHandler => (req, res, next) => next())
 
-beforeAll(async () => {
-  console.log = jest.fn()
-})
-
-afterAll(async () => {
-  ws?.close()
-  server.close()
-})
+afterAll(async () => server.close())
 
 it('TCP:8520 で待ち受けること', async () => {
   await expect(checkListening(8520)).resolves.toBe(true)
-})
-
-let ws: WebSocket
-const messages: any[] = []
-it('WebSocket で接続できること', async () => {
-  ws = new WebSocket('ws://localhost:8520')
-  await new Promise((r) => ws.on('open', r))
-  expect(ws.readyState).toBe(WebSocket.OPEN)
-  ws.on('message', (data) => messages.push(JSON.parse(data.toString())))
 })
 
 const item = { test: 'test' }
@@ -34,10 +17,6 @@ it('PUT /hoge でアイテムを登録できること', async () => {
   const body = JSON.stringify(item)
   const res = await fetch('http://localhost:8520/hoge', { method: 'PUT', headers, body })
   expect(res.status).toBe(200)
-})
-
-it('WebSocket 経由でイベントを受信できること', async () => {
-  expect(messages).toContainEqual({ body: item, path: '/hoge' })
 })
 
 it('GET /.json で一覧を取得できること', async () => {

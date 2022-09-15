@@ -20,7 +20,7 @@ export default defineComponent({
       const headers = new Headers({ 'Content-Type': 'application/json' })
       const item = { text: this.text }
       const body = JSON.stringify(item)
-      const res = await fetch(this.$route.path, { method: 'PUT', headers, body })
+      const res = await fetch('/', { method: 'POST', headers, body })
       // if (res.ok) location.reload()
     },
   },

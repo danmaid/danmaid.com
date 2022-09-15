@@ -1,10 +1,17 @@
 <template>
   <div>GET</div>
+  <template v-if="Array.isArray(data)">
+    <div v-for="item of data">
+      <GETDetail v-bind="item"></GETDetail>
+      {{ item }}
+    </div>
+  </template>
   {{ data }}
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
+import GETDetail from './GETDetail.vue'
 
 export default defineComponent({
   data() {
@@ -13,18 +20,21 @@ export default defineComponent({
       events: undefined as EventSource | undefined,
     }
   },
+  watch: {
+    $route() {
+      this.unload()
+      this.load()
+    },
+  },
   mounted() {
     this.load()
   },
   beforeUnmount() {
     this.unload()
   },
-  beforeRouteUpdate() {
-    this.unload()
-    this.load()
-  },
   methods: {
     async get(): Promise<void> {
+      console.log('get', this.$route.path)
       const res = await fetch(this.$route.path)
       if (!res.ok) return
       this.data = await res.json()
@@ -45,5 +55,6 @@ export default defineComponent({
       this.events = undefined
     },
   },
+  components: { GETDetail },
 })
 </script>
