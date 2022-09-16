@@ -113,10 +113,11 @@ export class Server extends http.Server {
     const timeline: unknown[] = new LimitedArray()
     const timelineIndex = join(this.dataDir, 'timeline.json')
     this.core.on('added', async (meta: Meta) => {
+      const date = new Date()
       const line =
         meta.type === 'application/json'
-          ? { ...meta, ...JSON.parse(await readFile(join(this.dataDir, meta.id), { encoding: 'utf-8' })) }
-          : meta
+          ? { date, ...meta, ...JSON.parse(await readFile(join(this.dataDir, meta.id), { encoding: 'utf-8' })) }
+          : { date, ...meta }
       timeline.push(line)
       await writeFile(timelineIndex, JSON.stringify(timeline))
       this.core.emit('timeline', line)
