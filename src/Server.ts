@@ -10,8 +10,9 @@ import { Core } from './Core'
 import { debuglog } from 'node:util'
 import { v4 as uuid } from 'uuid'
 import { createWriteStream, mkdirSync, createReadStream, accessSync, constants, openSync, closeSync } from 'node:fs'
-import { appendFile } from 'node:fs/promises'
+import { appendFile, writeFile, readFile } from 'node:fs/promises'
 import { createInterface } from 'node:readline'
+import { LimitedArray } from './LimitedArray'
 
 const console = { log: debuglog('server') }
 
@@ -109,6 +110,25 @@ export class Server extends http.Server {
     }
     this.on('request', app)
     this.app = app
+    const timeline: unknown[] = new LimitedArray()
+    const timelineIndex = join(this.dataDir, 'timeline.json')
+    this.core.on('added', async (meta: Meta) => {
+      const line =
+        meta.type === 'application/json'
+          ? { ...meta, ...JSON.parse(await readFile(join(this.dataDir, meta.id), { encoding: 'utf-8' })) }
+          : meta
+      timeline.push(line)
+      await writeFile(timelineIndex, JSON.stringify(timeline))
+      this.core.emit('timeline', line)
+    })
+    new Promise<void>((resolve, reject) => {
+      const idx = createInterface({ input: createReadStream(index) })
+      idx.on('line', (line) => JSON.parse(line).id === 'timeline.json' && resolve())
+      idx.on('close', reject)
+    }).catch(() => {
+      console.log('timeline.json index not found. to make it.')
+      appendFile(index, JSON.stringify({ id: 'timeline.json', type: 'application/json' }) + '\n')
+    })
   }
 
   isSSE(req: express.Request): boolean {
