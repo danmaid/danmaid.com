@@ -1,0 +1,146 @@
+openapi: 3.0.0
+info:
+  title: danmaid.com
+  version: 0.0.1
+paths:
+  /:
+    description: GOD of danmaid.com
+    get:
+      tags: ['GOD']
+      summary: global index
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  description: ID
+                  example: f1f2626f-b7d9-4612-89c6-24af748f3cfd
+            application/vnd.danmaid+json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                      description: |
+                        識別子、ID。
+                        xxx_id の xxx が存在しないという考え方。副次的に id との将来的な衝突回避にもなる。
+                      example: f1f2626f-b7d9-4612-89c6-24af748f3cfd
+                    _rev:
+                      type: string
+                      description: |
+                        履歴番号、Revision。
+                        xxx_rev の xxx が存在しないという考え方。副次的に rev との将来的な衝突回避にもなる。
+                      example: 1-83c7a5ce-0e8f-4a65-994a-c3e4ee6dc798
+                    title:
+                      description: タイトル、件名
+                      type: string
+                    body:
+                      description: 本文
+                      type: string
+                    tags:
+                      description: タグリスト
+                      type: array
+                      items:
+                        oneOf:
+                          - type: string
+                            description: 既知のタグ
+                            enum:
+                              - todo
+                          - type: string
+                            description: 未知のタグ
+    post:
+      tags: ['GOD']
+      requestBody:
+        content:
+          application/vnd.danmaid+json:
+            schema:
+              type: object
+              properties:
+                title:
+                  description: タイトル、件名
+                  type: string
+                body:
+                  description: 本文
+                  type: string
+                tags:
+                  description: タグリスト
+                  type: array
+                  items:
+                    oneOf:
+                      - type: string
+                        description: 既知のタグ
+                        enum:
+                          - todo
+                      - type: string
+                        description: 未知のタグ
+      responses:
+        200:
+          description: OK
+  /todos:
+    description: ToDo 管理用便利セット
+    get:
+      tags: ['ToDo']
+      summary: 'index by tag: todo'
+      responses:
+        200:
+          description: 成功。保存された ID を返す。
+          content:
+            application/json:
+              schema:
+                type: string
+                description: ID
+                example: f1f2626f-b7d9-4612-89c6-24af748f3cfd
+    post:
+      tags: ['ToDo']
+      description: |
+        POST /
+        ```json
+        {
+          "tags": ["todo"],
+          "title": "タイトル",
+          "body": "本文"
+        }
+        ```
+        を便利に実行するためのもの
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              description: 1行目を title, 2行目以降を body に格納
+              type: string
+              example: |
+                タイトル
+                本文
+                本文
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: タイトル
+                body:
+                  type: string
+                  example: |
+                    本文
+                    本文
+      responses:
+        200:
+          description: 成功。保存された ID を返す。
+          content:
+            application/json:
+              schema:
+                type: string
+                description: ID
+                example: f1f2626f-b7d9-4612-89c6-24af748f3cfd
+tags:
+  - name: GOD
+    description: 神
+  - name: ToDo
+    description: ToDo 管理用便利セット

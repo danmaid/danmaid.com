@@ -98,6 +98,21 @@ export class Server extends http.Server {
     app.post('/', async (req, res) => {
       const id = uuid()
       const type = req.get('Content-Type')
+      // vnd.danmaid+json は必ずオブジェクト (いきなり array とかは来ない)
+      if (req.get('Content-Type') === 'application/vnd.danmaid+json') {
+        const body = await new Promise<Record<string, unknown>>((resolve, reject) => {
+          let data: string
+          req.on('data', (chunk) => (data += chunk))
+          req.on('end', () => {
+            try {
+              resolve(JSON.parse(data))
+            } catch (err) {
+              reject(err)
+            }
+          })
+        })
+        this.core.emit({ id, type, ...body })
+      }
       await store(id, req)
       this.core.emit({ event: 'stored', id, type })
       res.json(id)
@@ -150,8 +165,7 @@ export class Server extends http.Server {
     })
     // todos
     this.core.on(
-      (ev) =>
-        ev.event === 'stored' && Array.isArray(ev.tags) && ev.tags.includes('todo'),
+      (ev) => ev.event === 'stored' && Array.isArray(ev.tags) && ev.tags.includes('todo'),
       async (meta: Meta) => {
         console.debug('todo', meta)
         if (meta.type !== 'application/json') return
