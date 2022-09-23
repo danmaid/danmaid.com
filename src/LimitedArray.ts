@@ -8,7 +8,7 @@ export class LimitedArray<T> extends Array<T> {
 
   push(...items: T[]): number {
     const length = super.push(...items)
-    while (length > this.limit) super.shift()
+    // while (length > this.limit) super.shift()
     return super.length
   }
 }

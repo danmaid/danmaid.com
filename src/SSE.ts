@@ -4,14 +4,15 @@ import { Core } from './Core'
 export default function (core: Core): Router {
   const connections = new Set<Response>()
 
-  core.onAll((event, data) => {
-    if (typeof event !== 'string') return
-    connections.forEach((res) => {
-      if (!res.headersSent) return
-      res.write(`event: ${event}\n`)
-      res.write(`data: ${JSON.stringify(data)}\n\n`)
-    })
-  })
+  core.on(
+    () => true,
+    (data) => {
+      connections.forEach((res) => {
+        if (!res.headersSent) return
+        res.write(`data: ${JSON.stringify(data)}\n\n`)
+      })
+    }
+  )
 
   return Router().get('*', (req, res, next) => {
     res.setHeader('Cache-Control', 'no-store')

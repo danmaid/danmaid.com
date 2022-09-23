@@ -1,17 +1,16 @@
-import { EventEmitter } from 'node:events'
+import { debuglog } from 'node:util'
 
-export class Core extends EventEmitter {
-  #all = Symbol('all')
+const console = { debug: debuglog('core') }
 
-  emit(eventName: string | symbol, ...args: any[]): boolean {
-    super.emit(this.#all, eventName, ...args)
-    return super.emit(eventName, ...args)
+export class Core<T = any> {
+  listeners: { matcher: (...args: T[]) => boolean; listener: (...args: T[]) => void }[] = []
+
+  emit(...args: T[]): void {
+    console.debug('emit', ...args)
+    this.listeners.filter(({ matcher }) => matcher(...args)).forEach(({ listener }) => listener(...args))
   }
 
-  onAll(listener: (eventName: string | symbol, ...args: any[]) => void): this {
-    return super.on(this.#all, listener)
-  }
-  offAll(listener: (...args: any[]) => void): this {
-    return super.off(this.#all, listener)
+  on(matcher: (...args: T[]) => boolean, listener: (...args: T[]) => void): void {
+    this.listeners.push({ matcher, listener })
   }
 }

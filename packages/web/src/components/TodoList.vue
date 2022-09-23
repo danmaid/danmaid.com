@@ -2,8 +2,7 @@
   <div>Todo</div>
   <hr />
   <form @submit.prevent="post" @reset="reset">
-    <input type="text" v-model="title" />
-    <input type="reset" />
+    <input type="text" v-model="body" />
     <input type="submit" />
   </form>
 </template>
@@ -19,10 +18,10 @@ export default defineComponent({
     endpoint: { type: String, default: '/todos' },
   },
   emits: ['update:modelValue'],
-  data(): { items?: Item[]; title: string } {
+  data(): { items?: Item[]; body: string } {
     return {
       items: this.modelValue,
-      title: '',
+      body: '',
     }
   },
   mounted() {
@@ -37,13 +36,12 @@ export default defineComponent({
       this.items = data
     },
     async post(): Promise<void> {
-      const body = { title: this.title }
-      const res = await fetch(this.endpoint, { method: 'POST', body: JSON.stringify(body) })
+      const res = await fetch(this.endpoint, { method: 'POST', body: this.body })
       if (!res.ok) return
       this.reset()
     },
     reset(): void {
-      this.title = ''
+      this.body = ''
     },
   },
 })

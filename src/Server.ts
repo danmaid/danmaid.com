@@ -14,9 +14,9 @@ import { appendFile, writeFile, readFile } from 'node:fs/promises'
 import { createInterface } from 'node:readline'
 import { LimitedArray } from './LimitedArray'
 
-const console = { log: debuglog('server') }
+const console = { log: debuglog('server'), debug: debuglog('server') }
 
-type Meta = { id: string; type?: string }
+type Meta = { id: string; type?: string; event?: 'added' }
 
 export class Server extends http.Server {
   app: express.Express
@@ -86,20 +86,29 @@ export class Server extends http.Server {
         res.json(list)
       } else next()
     })
-    app.post('/', async (req, res) => {
-      const id = uuid()
-      const type = req.get('Content-Type')
-      const meta: Meta = { id, type }
-      // store body
-      await new Promise((resolve, reject) => {
+    // store body
+    const store = (id: string, req: express.Request) =>
+      new Promise((resolve, reject) => {
         const output = createWriteStream(join(this.dataDir, id))
         output.on('finish', resolve)
         output.on('error', reject)
         req.pipe(output)
       })
-      // store index
-      appendFile(index, JSON.stringify(meta) + '\n')
-      this.core.emit('added', meta)
+
+    app.post('/', async (req, res) => {
+      const id = uuid()
+      const type = req.get('Content-Type')
+      await store(id, req)
+      this.core.emit({ event: 'stored', id, type })
+      res.json(id)
+    })
+    app.post('/:resource', async (req, res) => {
+      const id = uuid()
+      const type = req.get('Content-Type')
+      await store(id, req)
+      const meta: Record<string, unknown> = { event: 'stored', id, type }
+      if (req.params.resource === 'todos') meta.tags = ['todo']
+      this.core.emit(meta)
       res.json(id)
     })
     try {
@@ -110,18 +119,27 @@ export class Server extends http.Server {
     }
     this.on('request', app)
     this.app = app
+    // global index
+    this.core.on(
+      (ev) => ev.event === 'stored',
+      (ev) => appendFile(index, JSON.stringify(ev) + '\n')
+    )
+    // timeline
     const timeline: unknown[] = new LimitedArray()
     const timelineIndex = join(this.dataDir, 'timeline.json')
-    this.core.on('added', async (meta: Meta) => {
-      const date = new Date()
-      const line =
-        meta.type === 'application/json'
-          ? { date, ...meta, ...JSON.parse(await readFile(join(this.dataDir, meta.id), { encoding: 'utf-8' })) }
-          : { date, ...meta }
-      timeline.push(line)
-      await writeFile(timelineIndex, JSON.stringify(timeline))
-      this.core.emit('timeline', line)
-    })
+    this.core.on(
+      () => true,
+      async (meta: Meta) => {
+        const date = new Date()
+        const line =
+          meta.type === 'application/json'
+            ? { date, ...meta, ...JSON.parse(await readFile(join(this.dataDir, meta.id), { encoding: 'utf-8' })) }
+            : { date, ...meta }
+        timeline.push(line)
+        await writeFile(timelineIndex, JSON.stringify(timeline))
+        // this.core.emit(line)
+      }
+    )
     new Promise<void>((resolve, reject) => {
       const idx = createInterface({ input: createReadStream(index) })
       idx.on('line', (line) => JSON.parse(line).id === 'timeline.json' && resolve())
@@ -130,6 +148,20 @@ export class Server extends http.Server {
       console.log('timeline.json index not found. to make it.')
       appendFile(index, JSON.stringify({ id: 'timeline.json', type: 'application/json' }) + '\n')
     })
+    // todos
+    this.core.on(
+      (ev) =>
+        ev.event === 'stored' && Array.isArray(ev.tags) && ev.tags.includes('todo'),
+      async (meta: Meta) => {
+        console.debug('todo', meta)
+        if (meta.type !== 'application/json') return
+        const data = JSON.parse(await readFile(join(this.dataDir, meta.id), { encoding: 'utf-8' }))
+        const todos = JSON.parse(await readFile(join(this.dataDir, 'todos.json'), { encoding: 'utf-8' }))
+        todos.push(data)
+        await writeFile(join(this.dataDir, 'todos.json'), JSON.stringify(todos))
+        this.core.emit({ channel: 'todo', event: 'added' })
+      }
+    )
   }
 
   isSSE(req: express.Request): boolean {
