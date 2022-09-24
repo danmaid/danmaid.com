@@ -18,6 +18,27 @@ const console = { log: debuglog('server'), debug: debuglog('server') }
 
 type Meta = { id: string; type?: string; event?: 'added' }
 
+function parseUrl(url?: string, baseurl = 'http://localhost/') {
+  if (!url) return
+  console.log(url, baseurl)
+  const { hash, host, hostname, href, origin, password, pathname, port, protocol, search, searchParams, username } =
+    new URL(url, baseurl)
+  const result: Record<string, unknown> = {}
+  if (hash) result.hash = hash
+  if (host) result.host = host
+  if (hostname) result.hostname = hostname
+  if (href) result.href = href
+  if (origin) result.origin = origin
+  if (password) result.password = password
+  if (pathname) result.pathname = pathname
+  if (port) result.port = port
+  if (protocol) result.protocol = protocol
+  if (search) result.search = search
+  if (Array.from(searchParams).length > 0) result.searchParams = Object.fromEntries(searchParams)
+  if (username) result.username = username
+  return result
+}
+
 export class Server extends http.Server {
   app: express.Express
   cm = new ConnectionManager(this)
@@ -27,6 +48,18 @@ export class Server extends http.Server {
 
   constructor() {
     super()
+    this.on('request', (req, res) => {
+      const id = uuid()
+      const { headers, httpVersion, method, url } = req
+      console.log(headers as any)
+      const parsedUrl = parseUrl(url, headers.origin || (headers.host && `http://${headers.host}`))
+      console.log(parsedUrl as any)
+      const meta: Record<string, unknown> = { http: httpVersion, method, ...parsedUrl, ...headers }
+      console.log(meta as any)
+      req.once('close', () => console.log('request closed.', id))
+      res.once('close', () => console.log('response closed.', id))
+    })
+
     mkdirSync(this.dataDir, { recursive: true })
     const index = join(this.dataDir, 'index.jsonl')
     try {
@@ -111,19 +144,31 @@ export class Server extends http.Server {
             }
           })
         })
-        this.core.emit({ id, type, ...body })
       }
+      const { method, headers, path, query, params, url } = req
+      this.core.emit({ event: 'store', id, method, path, query, url, params, ...headers })
       await store(id, req)
       this.core.emit({ event: 'stored', id, type })
       res.json(id)
     })
-    app.post('/:resource', async (req, res) => {
+    app.post('/todos', async (req, res) => {
       const id = uuid()
       const type = req.get('Content-Type')
+      if (type && /text\/plain/.test(type)) {
+        const data = await new Promise((resolve, reject) => {
+          const result: { title?: string; body?: string } = {}
+          const input = createInterface(req)
+          input.once('line', (line) => {
+            result.title = line
+            input.once('line', () => (result.body = ''))
+            input.on('line', (line) => (result.body += line + '\n'))
+          })
+          input.on('close', () => resolve(result))
+        })
+        console.debug(data as any)
+      }
       await store(id, req)
-      const meta: Record<string, unknown> = { event: 'stored', id, type }
-      if (req.params.resource === 'todos') meta.tags = ['todo']
-      this.core.emit(meta)
+      this.core.emit({ event: 'stored', id, type, tags: ['todo'] })
       res.json(id)
     })
     try {
