@@ -6,7 +6,7 @@ export class Core<T = any> {
   listeners: { matcher: (...args: T[]) => boolean; listener: (...args: T[]) => void }[] = []
 
   emit(...args: T[]): void {
-    console.debug('emit', ...args)
+    console.debug('emit', args[0])
     this.listeners.filter(({ matcher }) => matcher(...args)).forEach(({ listener }) => listener(...args))
   }
 

@@ -10,9 +10,10 @@ import { Core } from './Core'
 import { debuglog } from 'node:util'
 import { v4 as uuid } from 'uuid'
 import { createWriteStream, mkdirSync, createReadStream, accessSync, constants, openSync, closeSync } from 'node:fs'
-import { appendFile, writeFile, readFile } from 'node:fs/promises'
+import { appendFile, writeFile, readFile, stat } from 'node:fs/promises'
 import { createInterface } from 'node:readline'
 import { LimitedArray } from './LimitedArray'
+import { Readable } from 'stream'
 
 const console = { log: debuglog('server'), debug: debuglog('server') }
 
@@ -49,16 +50,41 @@ export class Server extends http.Server {
   constructor() {
     super()
     this.on('request', (req, res) => {
-      const id = uuid()
+      const request_id = uuid()
       const { headers, httpVersion, method, url } = req
-      console.log(headers as any)
-      const parsedUrl = parseUrl(url, headers.origin || (headers.host && `http://${headers.host}`))
-      console.log(parsedUrl as any)
-      const meta: Record<string, unknown> = { http: httpVersion, method, ...parsedUrl, ...headers }
-      console.log(meta as any)
-      req.once('close', () => console.log('request closed.', id))
-      res.once('close', () => console.log('response closed.', id))
+      req.on('close', () => console.debug('request closed.', request_id))
+      res.on('close', () => console.debug('response closed.', request_id))
+      this.core.emit({ event: 'request', request_id, http: httpVersion, method, url, ...headers }, req)
+      this.core.on(
+        (ev) => ev.event === 'response' && ev.request_id === request_id,
+        (ev, stream: Readable) => {
+          res.setHeader('Content-Length', ev['content-length'])
+          res.setHeader('Content-Type', ev['content-type'])
+          res.writeHead(200)
+          stream.pipe(res)
+          // res.write(ev.body)
+          // res.end()
+        }
+      )
     })
+
+    // FileSystem Reader
+    this.core.on(
+      (ev) => ev.event === 'request' && ev.method === 'GET',
+      async ({ url, request_id }) => {
+        try {
+          const a = await stat(join(this.dataDir, url))
+          if (!a.isFile()) return
+          console.debug(url, a as any)
+          const { size } = a
+          const stream = createReadStream(join(this.dataDir, url))
+          this.core.emit(
+            { event: 'response', request_id, 'content-type': 'text/plain', 'content-length': size },
+            stream
+          )
+        } catch {}
+      }
+    )
 
     mkdirSync(this.dataDir, { recursive: true })
     const index = join(this.dataDir, 'index.jsonl')
@@ -83,30 +109,30 @@ export class Server extends http.Server {
     })
     app.use((req, res, next) => (this.isSSE(req) ? SSE(this.core)(req, res, next) : next()))
     app.use(express.static('./packages/web/dist'))
-    app.get('/:id', async (req, res, next) => {
-      // search index
-      try {
-        const meta = await new Promise<Meta>((resolve, reject) => {
-          const input = createInterface({ input: createReadStream(index) })
-          input.on('line', (line) => {
-            const meta: Meta = JSON.parse(line)
-            if (meta.id === req.params.id) {
-              resolve(meta)
-              input.close()
-            }
-          })
-          input.on('close', reject)
-        })
-        console.log(JSON.stringify(meta))
-        const type = meta.type || express.static.mime.lookup(join(this.dataDir, meta.id))
-        if (!req.accepts(type)) next()
-        res.set('Content-Type', type)
-        serveStatic(req, res, next)
-      } catch {
-        console.log('index not found.', req.params.id)
-        next()
-      }
-    })
+    // app.get('/:id', async (req, res, next) => {
+    //   // search index
+    //   try {
+    //     const meta = await new Promise<Meta>((resolve, reject) => {
+    //       const input = createInterface({ input: createReadStream(index) })
+    //       input.on('line', (line) => {
+    //         const meta: Meta = JSON.parse(line)
+    //         if (meta.id === req.params.id) {
+    //           resolve(meta)
+    //           input.close()
+    //         }
+    //       })
+    //       input.on('close', reject)
+    //     })
+    //     console.log(JSON.stringify(meta))
+    //     const type = meta.type || express.static.mime.lookup(join(this.dataDir, meta.id))
+    //     if (!req.accepts(type)) next()
+    //     res.set('Content-Type', type)
+    //     serveStatic(req, res, next)
+    //   } catch {
+    //     console.log('index not found.', req.params.id)
+    //     next()
+    //   }
+    // })
     app.get('/', async (req, res, next) => {
       if (req.accepts('json')) {
         // send index

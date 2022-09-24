@@ -9,7 +9,12 @@ export class DevServer extends Server {
 
   constructor() {
     super()
-    this.vite.then((vite) => this.app.use(vite.middlewares))
+    this.vite.then((vite) =>
+      this.app.use((req, res, next) => {
+        if (res.headersSent) return
+        vite.middlewares(req, res, next)
+      })
+    )
   }
 
   close(callback?: ((err?: Error | undefined) => void) | undefined): this {
