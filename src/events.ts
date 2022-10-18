@@ -1,9 +1,10 @@
 import { EventEmitter } from 'node:events'
 import { v4 as uuid } from 'uuid'
 import { appendFile } from 'node:fs/promises'
-import { createReadStream, mkdirSync, closeSync, openSync } from 'node:fs'
+import { createReadStream, mkdirSync, closeSync, openSync, createWriteStream } from 'node:fs'
 import { createInterface } from 'node:readline'
-import { dirname } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { Readable } from 'node:stream'
 
 export interface EventMeta extends Record<string, unknown> {
   id: string
@@ -11,16 +12,17 @@ export interface EventMeta extends Record<string, unknown> {
   type: string
 }
 
-export interface EventStream<T extends EventMeta> {
-  emit(eventName: 'event', event: T): boolean
+export interface EventStream {
+  emit(eventName: 'event', event: EventMeta, content?: unknown): boolean
   emit(eventName: string | symbol, ...args: any[]): boolean
 
-  on(eventName: 'event', listener: (event: T) => void): this
+  on(eventName: 'event', listener: (event: EventMeta, content?: unknown) => void): this
   on(eventName: string | symbol, listener: (...args: any[]) => void): this
 }
 
-export class EventStream<T extends EventMeta> extends EventEmitter {
-  indexFile = 'data/events/index.jsonl'
+export class EventStream extends EventEmitter {
+  dir = 'data/events'
+  indexFile = resolve(this.dir, 'index.jsonl')
 
   constructor() {
     super()
@@ -28,28 +30,33 @@ export class EventStream<T extends EventMeta> extends EventEmitter {
     closeSync(openSync(this.indexFile, 'a'))
   }
 
-  async add(meta: Omit<T, 'id'>): Promise<string> {
+  async add(meta: Omit<EventMeta, 'id'>, content?: Readable): Promise<string> {
     const event = { id: uuid(), date: new Date(), type: 'created', ...meta }
+    if (content instanceof Readable) {
+      const writer = createWriteStream(resolve(this.dir, event.id))
+      content.pipe(writer)
+      await new Promise((r) => content.on('end', r))
+    }
     await appendFile(this.indexFile, JSON.stringify(event) + '\n')
     this.emit('event', event)
     return event.id
   }
 
-  get(id: string): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
+  get(id: string): Promise<EventMeta> {
+    return new Promise<EventMeta>((resolve, reject) => {
       const reader = createInterface(createReadStream(this.indexFile))
       reader.on('line', (line) => {
-        const event: T = JSON.parse(line)
+        const event: EventMeta = JSON.parse(line)
         if (event.id === id) resolve({ ...event, date: new Date(event.date) })
       })
       reader.on('close', () => reject())
     })
   }
 
-  filter(predicate: (meta: T) => boolean): Promise<T[]> {
-    return new Promise<T[]>((resolve) => {
+  filter(predicate: (meta: EventMeta) => boolean): Promise<EventMeta[]> {
+    return new Promise<EventMeta[]>((resolve) => {
       const reader = createInterface(createReadStream(this.indexFile))
-      const items: T[] = []
+      const items: EventMeta[] = []
       reader.on('line', (line) => {
         const event = JSON.parse(line, (k, v) => (k === 'date' ? new Date(v) : v))
         predicate(event) && items.push(event)
