@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>API Scenario test for Todo List</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="stub.js" type="module"></script>
+    <style>
+      th,
+      td,
+      .border {
+        border-right: 1px solid grey;
+        border-bottom: 1px solid grey;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div>
+      <button onclick="run()">run</button>
+      <button onclick="resetStub()">reset</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th colspan="4">Request</th>
+          <th colspan="4">Response</th>
+          <th>Event</th>
+          <th>Result</th>
+        </tr>
+        <tr>
+          <th>method</th>
+          <th>url</th>
+          <th>headers</th>
+          <th>body</th>
+          <th>status</th>
+          <th>statusText</th>
+          <th>headers</th>
+          <th>body</th>
+          <th>event</th>
+          <th>expected</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <template id="row">
+          <tr>
+            <td id="method"></td>
+            <td id="url"></td>
+            <td><pre id="req-headers"></pre></td>
+            <td><pre id="req-body"></pre></td>
+            <td id="status"></td>
+            <td id="status-text"></td>
+            <td><pre id="headers"></pre></td>
+            <td><pre id="body" style="max-height: 100px; overflow-y: auto"></pre></td>
+            <td><pre id="event"></pre></td>
+            <td>
+              <div id="expected" style="display: grid; grid-template-columns: max-content 1fr"></div>
+            </td>
+          </tr>
+        </template>
+
+        <template id="keyvalue">
+          <span id="key" class="border" style="white-space: nowrap"></span>
+          <span id="value" class="border"></span>
+        </template>
+      </tbody>
+    </table>
+
+    <script>
+      function resetStub() {
+        indexedDB.deleteDatabase('stub')
+        location.reload()
+      }
+
+      function createKVElement(key, value) {
+        const element = document.getElementById('keyvalue').content.cloneNode(true)
+        element.getElementById('key').textContent = key
+        element.getElementById('value').textContent = value
+        return element
+      }
+
+      function addRow() {
+        const row = document.getElementById('row').content.cloneNode(true)
+        const request = {
+          method: row.getElementById('method'),
+          url: row.getElementById('url'),
+          headers: row.getElementById('req-headers'),
+          body: row.getElementById('req-body'),
+        }
+        const response = {
+          status: row.getElementById('status'),
+          statusText: row.getElementById('status-text'),
+          headers: row.getElementById('headers'),
+          body: row.getElementById('body'),
+        }
+        const expected = row.getElementById('expected')
+        document.getElementById('tbody').append(row)
+        return { request, response, expected }
+      }
+
+      function renderRequest(dom, req, body) {
+        dom.method.textContent = req.method
+        dom.url.textContent = req.url
+        dom.headers.textContent = JSON.stringify(Object.fromEntries(req.headers.entries()), null, 2)
+        if (body) dom.body.textContent = body
+      }
+
+      function renderResponse(dom, res, body) {
+        dom.status.textContent = res.status
+        dom.statusText.textContent = res.statusText
+        dom.headers.textContent = JSON.stringify(Object.fromEntries(res.headers.entries()), null, 2)
+        if (body) dom.body.textContent = body
+      }
+
+      async function testRR(req, expects, body) {
+        const { request, response, expected } = addRow()
+
+        renderRequest(request, req, body ? JSON.stringify(body, null, 2) : undefined)
+        const res = await fetch(req)
+
+        await new Promise((r) => setTimeout(r, 1000))
+        const data = await res.json()
+        renderResponse(response, res, JSON.stringify(data, null, 2))
+
+        expects.forEach(([text, expect]) => expected.append(createKVElement(text, expect(req, res, data))))
+        return data
+      }
+
+      function renderSSE(src) {
+        const state = {
+          [EventSource.CLOSED]: 'CLOSED',
+          [EventSource.CONNECTING]: 'CONNECTING',
+          [EventSource.OPEN]: 'OPEN',
+        }
+        const { request, response } = addRow()
+        request.method.textContent = 'SSE'
+        request.url.textContent = src.url
+        response.status.textContent = src.readyState
+        response.statusText.textContent = state[src.readyState]
+      }
+
+      async function run() {
+        const { src, events } = (function () {
+          const events = []
+          const src = new EventSource('/todos')
+
+          src.onmessage = (ev) => {
+            const event = JSON.parse(ev.data)
+            events.push(event)
+            const div = document.createElement('div')
+            div.textContent = JSON.stringify(event, null, 2)
+            const parents = document.querySelectorAll('#event')
+            parents[parents.length - 1].append(div)
+          }
+          src.onopen = () => renderSSE(src)
+          renderSSE(src)
+
+          return { events, src }
+        })()
+
+        await (async function () {
+          const req = new Request('/todos')
+
+          const { request, response, expected } = addRow()
+          renderRequest(request, req)
+          const res = await fetch(req)
+
+          await new Promise((r) => setTimeout(r, 1000))
+          const data = await res.json()
+          renderResponse(response, res, JSON.stringify(data, null, 2))
+
+          expected.append(createKVElement('status === 200', res.status === 200))
+          expected.append(
+            createKVElement('Content-Type === application/json', res.headers.get('Content-Type') === 'application/json')
+          )
+        })()
+
+        const created = await (async function () {
+          const body = { title: 'test-todo' }
+          const req = new Request('/todos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/vnd.danmaid+json' },
+            body: JSON.stringify(body),
+          })
+
+          const { request, response, expected } = addRow()
+          renderRequest(request, req, JSON.stringify(body, null, 2))
+          const res = await fetch(req)
+
+          await new Promise((r) => setTimeout(r, 1000))
+          const data = await res.json()
+          renderResponse(response, res, JSON.stringify(data, null, 2))
+
+          expected.append(createKVElement('status === 201', res.status === 201))
+          expected.append(
+            createKVElement('Content-Type === application/json', res.headers.get('Content-Type') === 'application/json')
+          )
+          const event = { type: 'created', ...body }
+          expected.append(
+            createKVElement(
+              `events toContain(${JSON.stringify(event)})`,
+              events.some((e) => Object.entries(event).every(([k, v]) => e[k] === v))
+            )
+          )
+          return data
+        })()
+
+        await new Promise((r) => setTimeout(r, 1000))
+
+        await testRR(new Request(`/todos/${created}`), [
+          ['status === 200', (req, res) => res.status === 200],
+          ['Content-Type === application/json', (req, res) => res.headers.get('Content-Type') === 'application/json'],
+        ])
+        await new Promise((r) => setTimeout(r, 1000))
+
+        await testRR(new Request(`/todos/${created}/events`), [
+          ['status === 200', (req, res) => res.status === 200],
+          ['Content-Type === application/json', (req, res) => res.headers.get('Content-Type') === 'application/json'],
+        ])
+        await new Promise((r) => setTimeout(r, 1000))
+
+        await (async function (id) {
+          const body = { status: 'doing' }
+          const req = new Request(`/todos/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/vnd.danmaid+json' },
+            body: JSON.stringify(body),
+          })
+
+          const { request, response, expected } = addRow()
+          renderRequest(request, req, JSON.stringify(body, null, 2))
+          const res = await fetch(req)
+
+          await new Promise((r) => setTimeout(r, 1000))
+          const data = await res.json()
+          renderResponse(response, res, JSON.stringify(data, null, 2))
+
+          expected.append(createKVElement('status === 200', res.status === 200))
+          expected.append(
+            createKVElement('Content-Type === application/json', res.headers.get('Content-Type') === 'application/json')
+          )
+          await (async function () {
+            const data = await fetch(`/todos/${id}`).then((v) => v.json())
+            expected.append(
+              createKVElement(
+                '(GET /todos/${id}).body toMatchObject(${body})',
+                Object.entries(body).every(([k, v]) => data[k] === v)
+              )
+            )
+          })()
+          const event = { type: 'updated', ...body }
+          expected.append(
+            createKVElement(
+              `events toContain(${JSON.stringify(event)})`,
+              events.some((e) => Object.entries(event).every(([k, v]) => e[k] === v))
+            )
+          )
+        })(created)
+
+        await (async function (id) {
+          const body = 'test-comment'
+          const req = new Request(`/todos/${id}/comments`, {
+            method: 'POST',
+            body: 'test-comment',
+          })
+
+          const { request, response, expected } = addRow()
+          renderRequest(request, req, JSON.stringify(body, null, 2))
+          const res = await fetch(req)
+
+          await new Promise((r) => setTimeout(r, 1000))
+          const data = await res.json()
+          renderResponse(response, res, JSON.stringify(data, null, 2))
+
+          expected.append(createKVElement('status === 200', res.status === 200))
+          expected.append(
+            createKVElement('Content-Type === application/json', res.headers.get('Content-Type') === 'application/json')
+          )
+          await (async function () {
+            const data = await fetch(`/todos/${id}`).then((v) => v.json())
+            expected.append(
+              createKVElement('(GET /todos/${id}).body.comments toContain(${body})', data.comments.includes(body))
+            )
+          })()
+          const event = { type: 'updated', message: body }
+          expected.append(
+            createKVElement(
+              `events toContain(${JSON.stringify(event)})`,
+              events.some((e) => Object.entries(event).every(([k, v]) => e[k] === v))
+            )
+          )
+        })(created)
+
+        await (async function (id) {
+          const body = { status: 'done' }
+          const req = new Request(`/todos/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/vnd.danmaid+json' },
+            body: JSON.stringify(body),
+          })
+
+          const { request, response, expected } = addRow()
+          renderRequest(request, req, JSON.stringify(body, null, 2))
+          const res = await fetch(req)
+
+          await new Promise((r) => setTimeout(r, 1000))
+          const data = await res.json()
+          renderResponse(response, res, JSON.stringify(data, null, 2))
+
+          expected.append(createKVElement('status === 200', res.status === 200))
+          expected.append(
+            createKVElement('Content-Type === application/json', res.headers.get('Content-Type') === 'application/json')
+          )
+          await (async function () {
+            const data = await fetch(`/todos/${id}`).then((v) => v.json())
+            expected.append(
+              createKVElement(
+                '(GET /todos/${id}).body toMatchObject(${body})',
+                Object.entries(body).every(([k, v]) => data[k] === v)
+              )
+            )
+          })()
+          const event = { type: 'updated', ...body }
+          expected.append(
+            createKVElement(
+              `events toContain(${JSON.stringify(event)})`,
+              events.some((e) => Object.entries(event).every(([k, v]) => e[k] === v))
+            )
+          )
+        })(created)
+
+        await testRR(new Request('/todos'), [
+          ['status === 200', (req, res) => res.status === 200],
+          ['Content-Type === application/json', (req, res) => res.headers.get('Content-Type') === 'application/json'],
+        ])
+        await new Promise((r) => setTimeout(r, 1000))
+
+        src.close()
+        renderSSE(src)
+      }
+
+      this.onload = run
+    </script>
+  </body>
+</html>

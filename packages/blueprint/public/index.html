@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Todo List</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="stub.js" type="module"></script>
+  </head>
+
+  <body>
+    <div>
+      <button onclick="load()">refresh</button>
+      <button onclick="attachEvents()">events</button>
+    </div>
+    <table style="width: 100%; table-layout: fixed">
+      <thead>
+        <th></th>
+        <th></th>
+        <th></th>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <hr />
+    <form name="add-form" style="display: flex" onsubmit="add(this); return false">
+      <textarea id="title" style="flex: 1 1"></textarea>
+      <input type="submit" value="add" />
+    </form>
+
+    <hr />
+    <div id="events"></div>
+
+    <template id="list-item">
+      <tr id="row">
+        <td><input type="text" id="title" /></td>
+        <td><span id="last"></span></td>
+        <td>
+          <select id="status">
+            <option></option>
+            <option value="doing">doing</option>
+            <option value="pause">pause</option>
+            <option value="done">done</option>
+          </select>
+          <input type="checkbox" id="expand" />
+        </td>
+      </tr>
+      <tr>
+        <td colspan="3"><textarea id="comment"></textarea></td>
+      </tr>
+    </template>
+
+    <script>
+      async function load() {
+        const res = await fetch('/todos', {
+          headers: { Accept: 'application/vnd.danmaid+json' },
+        })
+        const todos = await res.json()
+        const template = document.querySelector('template#list-item')
+        const tbody = document.getElementById('tbody')
+        tbody.textContent = null
+        todos.forEach(({ title, status, last_event, id }) => {
+          const templ = template.content.cloneNode(true)
+          const inputTitle = templ.getElementById('title')
+          inputTitle.value = title
+          inputTitle.onchange = (v) => patch(id, { title: v.target.value })
+          inputTitle.onclick = (e) => e.stopPropagation()
+          templ.getElementById('last').textContent = last_event?.message
+            ? last_event?.message
+            : JSON.stringify(last_event)
+          const inputStatus = templ.getElementById('status')
+          inputStatus.value = status
+          inputStatus.onchange = (v) => patch(id, { status: v.target.value })
+          inputStatus.onclick = (e) => e.stopPropagation()
+          templ.getElementById('expand').onclick = (e) => e.stopPropagation()
+
+          // 2nd row
+          const inputComment = templ.getElementById('comment')
+          inputComment.onchange = (v) => addComment(id, v.target.value)
+          templ.getElementById('row').onclick = (e) => {
+            // 実際は /todos/:id がいい
+            location.href = `detail.html?id=${id}`
+          }
+          tbody.append(templ)
+        })
+      }
+
+      async function add(form) {
+        const res = await fetch('/todos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/vnd.danmaid+json' },
+          body: JSON.stringify({ title: form.title.value }),
+        })
+        if (res.ok) {
+          form.reset()
+          load()
+        }
+      }
+
+      async function patch(id, patch) {
+        const res = await fetch(`/todos/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/vnd.danmaid+json' },
+          body: JSON.stringify(patch),
+        })
+        if (res.ok) load()
+      }
+
+      async function addComment(id, comment) {
+        const res = await fetch(`/todos/${id}/comments`, {
+          method: 'POST',
+          body: comment,
+        })
+        if (res.ok) load()
+      }
+
+      async function attachEvents() {
+        const events = new EventSource('/todos')
+        events.onmessage = ({ data }) => {
+          const event = document.createElement('div')
+          event.textContent = data
+          document.getElementById('events').append(event)
+        }
+      }
+
+      window.addEventListener('load', () => load())
+    </script>
+  </body>
+</html>
