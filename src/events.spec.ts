@@ -1,4 +1,11 @@
-import { events } from './events'
+import { EventMeta, events } from './events'
+
+export function isEventMeta(v: any): v is EventMeta {
+  expect(v).toHaveProperty('id', expect.stringMatching(/^[\w-]+$/))
+  expect(v).toHaveProperty('type', expect.stringMatching(/^\w+$/))
+  expect(v).toHaveProperty('date', expect.any(Date))
+  return true
+}
 
 it('取得 存在しない', async () => {
   await expect(events.get('nothing')).rejects.toBeUndefined()

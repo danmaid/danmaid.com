@@ -1,22 +1,20 @@
-import { events } from './events'
 import { createServer, IncomingMessage, OutgoingHttpHeaders } from 'http'
 import { v4 as uuid } from 'uuid'
 import { Socket } from 'node:net'
 import { EventEmitter } from 'node:events'
+import { core } from './core'
 
-const rr = new EventEmitter()
+const requests = new EventEmitter()
 
-events.on('event', (ev) => {
-  if (ev.type !== 'response') return
-  rr.emit(ev.id, ev)
+core.on('response', (m, v, content) => {
+  requests.emit(m.request, m, v, content)
 })
 
 export const server = createServer()
 
 type SocketWithID = Socket & { id?: string }
 server.on('connection', (socket: SocketWithID) => {
-  const event = {
-    type: 'connection',
+  const connection = {
     id: uuid(),
     remote: {
       address: socket.remoteAddress,
@@ -24,35 +22,38 @@ server.on('connection', (socket: SocketWithID) => {
       port: socket.remotePort,
     },
   }
-  socket.id = event.id
-  events.add(event)
+  socket.id = connection.id
+  socket.once('close', () => core.emit('connection', { type: 'closed' }, connection.id))
+  core.emit('connection', { type: 'opened' }, connection)
 })
 
-type IncomingMessageWithID = IncomingMessage & { id?: string; socket: SocketWithID }
 export interface ResponseEvent extends Record<string, unknown> {
-  type: 'response'
-  id: string
   status: number
   statusText?: string
   headers?: OutgoingHttpHeaders
 }
+
+type IncomingMessageWithID = IncomingMessage & { id?: string; socket: SocketWithID }
 server.on('request', (req: IncomingMessageWithID, res) => {
-  const event = {
-    type: 'request',
+  const request = {
     id: uuid(),
     http: req.httpVersion,
     method: req.method,
     url: req.url,
     headers: req.headers,
-    connection: req.socket.id,
   }
-  req.id = event.id
-  rr.once(event.id, (ev: ResponseEvent, body?: unknown) => {
+  req.id = request.id
+  const connection = req.socket.id
+
+  req.once('close', () => core.emit('request', { type: 'closed' }, request.id))
+  requests.on(request.id, (m: any, ev: ResponseEvent, body?: unknown) => {
+    res.on('finish', () => core.emit('request', { type: 'sent', request }, request.id))
     res.writeHead(ev.status, ev.statusText, ev.headers)
     if (body) res.write(body)
     res.end()
   })
-  req.headers['content-length'] ? events.add(event, req) : events.add(event)
+
+  core.emit('request', { type: 'opened', connection }, request, req)
 })
 
 server.listen(8520, () => {
