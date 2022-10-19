@@ -1,59 +1,88 @@
-import { createServer, IncomingMessage, OutgoingHttpHeaders } from 'http'
+import { createServer, IncomingMessage, IncomingHttpHeaders, OutgoingHttpHeaders } from 'http'
 import { v4 as uuid } from 'uuid'
-import { Socket } from 'node:net'
-import { EventEmitter } from 'node:events'
-import { core } from './core'
-
-const requests = new EventEmitter()
-
-core.on('response', (m, v, content) => {
-  requests.emit(m.request, m, v, content)
-})
+import { Socket, AddressInfo } from 'node:net'
+import { core, Event } from './core'
+import { Readable } from 'node:stream'
 
 export const server = createServer()
 
+type ConnectionId = string
+interface ConnectionDetail {
+  id: ConnectionId
+  remote: Partial<AddressInfo>
+}
+export interface ConnectionEvent extends Event {
+  type: 'connected' | 'disconnected'
+  connection: ConnectionDetail | ConnectionId
+}
+
 type SocketWithID = Socket & { id?: string }
 server.on('connection', (socket: SocketWithID) => {
-  const connection = {
-    id: uuid(),
+  const id: ConnectionId = uuid()
+  const connection: ConnectionDetail = {
+    id,
     remote: {
       address: socket.remoteAddress,
       family: socket.remoteFamily,
       port: socket.remotePort,
     },
   }
-  socket.id = connection.id
-  socket.once('close', () => core.emit('connection', { type: 'closed' }, connection.id))
-  core.emit('connection', { type: 'opened' }, connection)
+  socket.id = id
+  socket.once('close', () => core.emit<ConnectionEvent>({ type: 'disconnected', connection: id }))
+  core.emit<ConnectionEvent>({ type: 'connected', connection })
 })
 
-export interface ResponseEvent extends Record<string, unknown> {
-  status: number
-  statusText?: string
-  headers?: OutgoingHttpHeaders
+export interface ResponseEvent extends Event {
+  type: 'response'
+  response: {
+    status: number
+    statusText?: string
+    headers?: OutgoingHttpHeaders
+    content?: unknown
+  }
+  request: RequestId
+}
+
+type RequestId = string
+interface RequestDetail {
+  id: RequestId
+  http: string
+  method?: string
+  url?: string
+  headers: IncomingHttpHeaders
+  content?: Readable
+}
+export interface RequestEvent extends Event {
+  type: 'request' | 'responded'
+  request: RequestDetail | RequestId
+  connection?: ConnectionId
 }
 
 type IncomingMessageWithID = IncomingMessage & { id?: string; socket: SocketWithID }
-server.on('request', (req: IncomingMessageWithID, res) => {
-  const request = {
-    id: uuid(),
+server.on('request', async (req: IncomingMessageWithID, res) => {
+  const id: RequestId = uuid()
+  const request: RequestDetail = {
+    id,
     http: req.httpVersion,
     method: req.method,
     url: req.url,
     headers: req.headers,
   }
-  req.id = request.id
+  req.id = id
   const connection = req.socket.id
+  if (req.headers['content-length']) {
+    const length = parseInt(req.headers['content-length'])
+    if (length > 0) request.content = req
+  }
 
-  req.once('close', () => core.emit('request', { type: 'closed' }, request.id))
-  requests.on(request.id, (m: any, ev: ResponseEvent, body?: unknown) => {
-    res.on('finish', () => core.emit('request', { type: 'sent', request }, request.id))
-    res.writeHead(ev.status, ev.statusText, ev.headers)
-    if (body) res.write(body)
-    res.end()
-  })
-
-  core.emit('request', { type: 'opened', connection }, request, req)
+  const wait = core.wait<ResponseEvent>((ev) => ev.type === 'response' && ev.request === id)
+  core.emit<RequestEvent>({ type: 'request', request, connection })
+  const re = await wait
+  const { status, statusText, headers, content } = re.response
+  res.writeHead(status, statusText, headers)
+  if (content) res.write(content)
+  res.on('finish', () => core.emit<RequestEvent>({ type: 'responded', request: id, connection }))
+  res.end()
 })
 
 server.listen(8520, () => {
