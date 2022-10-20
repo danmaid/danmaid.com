@@ -1,6 +1,5 @@
-import { Server } from './Server'
+import './core'
+import './events'
+import './http'
 
-export const server = new Server()
-server.listen(8520, () => {
-  console.log(server.address())
-})
+export { server } from './http'

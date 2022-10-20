@@ -1,69 +1,58 @@
-import { EventEmitter } from 'node:events'
-import { v4 as uuid } from 'uuid'
 import { appendFile } from 'node:fs/promises'
-import { createReadStream, mkdirSync, closeSync, openSync, createWriteStream } from 'node:fs'
+import { mkdirSync, closeSync, openSync, createWriteStream, createReadStream } from 'node:fs'
 import { createInterface } from 'node:readline'
 import { dirname, resolve } from 'node:path'
 import { Readable } from 'node:stream'
+import { core, Event } from './core'
+import { RequestEvent, ResponseEvent } from './http'
 
-export interface EventMeta extends Record<string, unknown> {
-  id: string
-  date: Date
-  type: string
+const dir = 'data/events'
+const indexFile = resolve(dir, 'index.jsonl')
+
+mkdirSync(dirname(indexFile), { recursive: true })
+closeSync(openSync(indexFile, 'a'))
+
+interface ContentEvent extends Event {
+  content?: Readable | string
 }
 
-export interface EventStream {
-  emit(eventName: 'event', event: EventMeta, content?: unknown): boolean
-  emit(eventName: string | symbol, ...args: any[]): boolean
-
-  on(eventName: 'event', listener: (event: EventMeta, content?: unknown) => void): this
-  on(eventName: string | symbol, listener: (...args: any[]) => void): this
+async function appendIndex(ev: ContentEvent): Promise<void> {
+  const event = { ...ev }
+  if (event.content instanceof Readable) {
+    const writer = createWriteStream(resolve(dir, event.id))
+    event.content.pipe(writer)
+    await new Promise((r) => writer.once('finish', r))
+    event.content = '[object Readable]'
+  }
+  await appendFile(indexFile, JSON.stringify(event) + '\n')
 }
 
-export class EventStream extends EventEmitter {
-  dir = 'data/events'
-  indexFile = resolve(this.dir, 'index.jsonl')
+export function filter<T>(filter: (meta: T) => boolean): Promise<T[]> {
+  return new Promise<T[]>((resolve) => {
+    const reader = createInterface(createReadStream(indexFile))
+    const items: T[] = []
+    reader.on('line', (line) => {
+      const event = JSON.parse(line, (k, v) => (k === 'date' ? new Date(v) : v))
+      filter(event) && items.push(event)
+    })
+    reader.on('close', () => resolve(items))
+  })
+}
 
-  constructor() {
-    super()
-    mkdirSync(dirname(this.indexFile), { recursive: true })
-    closeSync(openSync(this.indexFile, 'a'))
-  }
+export function getContent(id: string): Readable {
+  return createReadStream(resolve(dir, id))
+}
 
-  async add(meta: Omit<EventMeta, 'id'>, content?: Readable): Promise<string> {
-    const event = { id: uuid(), date: new Date(), type: 'created', ...meta }
-    if (content instanceof Readable) {
-      const writer = createWriteStream(resolve(this.dir, event.id))
-      content.pipe(writer)
-      await new Promise((r) => content.on('end', r))
-    }
-    await appendFile(this.indexFile, JSON.stringify(event) + '\n')
-    this.emit('event', event)
-    return event.id
-  }
-
-  get(id: string): Promise<EventMeta> {
-    return new Promise<EventMeta>((resolve, reject) => {
-      const reader = createInterface(createReadStream(this.indexFile))
-      reader.on('line', (line) => {
-        const event: EventMeta = JSON.parse(line)
-        if (event.id === id) resolve({ ...event, date: new Date(event.date) })
-      })
-      reader.on('close', () => reject())
+core.on(() => true, appendIndex)
+core.on<RequestEvent>(
+  (ev) => ev.type === 'request' && ev.method === 'GET' && ev.path === '/events',
+  async (ev) => {
+    const events = await filter(() => true)
+    core.emit<ResponseEvent>({
+      type: 'response',
+      request: ev.request,
+      status: 200,
+      content: Readable.from(JSON.stringify(events)),
     })
   }
-
-  filter(predicate: (meta: EventMeta) => boolean): Promise<EventMeta[]> {
-    return new Promise<EventMeta[]>((resolve) => {
-      const reader = createInterface(createReadStream(this.indexFile))
-      const items: EventMeta[] = []
-      reader.on('line', (line) => {
-        const event = JSON.parse(line, (k, v) => (k === 'date' ? new Date(v) : v))
-        predicate(event) && items.push(event)
-      })
-      reader.on('close', () => resolve(items))
-    })
-  }
-}
-
-export const events = new EventStream()
+)

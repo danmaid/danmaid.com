@@ -17,8 +17,9 @@ beforeAll(async () => {
     (ev) => {
       core.emit<ResponseEvent>({
         type: 'response',
-        response: { status: 200, content: 'data' },
-        request: typeof ev.request === 'string' ? ev.request : ev.request.id,
+        status: 200,
+        content: 'data',
+        request: ev.request,
       })
     }
   )
@@ -50,32 +51,29 @@ it('connection created/deleted', async () => {
   const created = core.wait<ConnectionEvent>((ev) => ev.type === 'connected')
   const deleted = core.wait<ConnectionEvent>((ev) => ev.type === 'disconnected')
   await fetch(url)
-  const c: any = await created
+  const c = await created
   const d = await deleted
-  expect(c.connection.id).toBe(d.connection)
+  expect(c.connection).toBe(d.connection)
 })
 
 it('request created/deleted', async () => {
   const opened = core.wait<RequestEvent>((ev) => ev.type === 'request')
   const closed = core.wait<RequestEvent>((ev) => ev.type === 'responded')
   const res = await fetch(url)
-  const c: any = await opened
+  const c = await opened
   const d = await closed
-  expect(c.request.id).toBe(d.request)
+  expect(c.request).toBe(d.request)
   await expect(res.text()).resolves.toBe('data')
   core.wait<ConnectionEvent>((ev) => ev.type === 'disconnected')
 })
 
-it.only('POST with content', async () => {
+it('POST with content', async () => {
   const opened = core.wait<RequestEvent>((ev) => ev.type === 'request')
   const closed = core.wait<RequestEvent>((ev) => ev.type === 'responded')
   const res = await fetch(url, { method: 'POST', body: 'hoge' })
-  const c: any = await opened
+  const c = await opened
   const d = await closed
-  expect(c.request.id).toBe(d.request)
+  expect(c.request).toBe(d.request)
   await expect(res.text()).resolves.toBe('data')
-  // for debug
-  await new Promise((r) => setTimeout(r, 1000))
-  console.log(events)
   core.wait<ConnectionEvent>((ev) => ev.type === 'disconnected')
 })
