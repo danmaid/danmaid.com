@@ -56,16 +56,17 @@ export const canIndexResolver: Resolver<PathEvent> = (ev) =>
   (ev.type === 'created' || ev.type === 'updated')
 
 export const createOrUpdateIndexListener: Listener<PathEvent> = async (ev) => {
-  const path = ev.path.replace(/\/[^/]*$/, '')
-  const dir = join('data', path)
+  const [, parent, name] = /(.*)\/([^/]*)$/.exec(ev.path) || []
+  const event = { ...ev, id: name }
+  const dir = join('data', parent)
   await mkdir(dir, { recursive: true })
   const file = join(dir, indexFile)
   try {
-    const size = await updateIndex(file, ev)
-    core.emit<IndexedEvent>({ type: 'updated', path, size })
+    const size = await updateIndex(file, event)
+    core.emit<IndexedEvent>({ type: 'updated', path: parent, size })
   } catch {
-    await writeFile(file, JSON.stringify(ev) + '\n')
-    core.emit<IndexedEvent>({ type: 'created', path, size: 1 })
+    await writeFile(file, JSON.stringify(event) + '\n')
+    core.emit<IndexedEvent>({ type: 'created', path: parent, size: 1 })
   }
 }
 
