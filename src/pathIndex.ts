@@ -1,4 +1,4 @@
-import { core, Event, Listener, Resolver } from './core'
+import { core, Event } from './core'
 import { dirname, join } from 'node:path'
 import { mkdir, access, stat, rename, rm, writeFile } from 'node:fs/promises'
 import { createReadStream, createWriteStream, constants } from 'node:fs'
