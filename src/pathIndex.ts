@@ -1,23 +1,50 @@
-import { core, Event, Resolver, Listener } from './core'
-import { dirname, join, basename, parse } from 'node:path'
-import { appendFile, mkdir, access, stat, rename, rm, writeFile } from 'node:fs/promises'
+import { core, Event, Listener, Resolver } from './core'
+import { dirname, join } from 'node:path'
+import { mkdir, access, stat, rename, rm, writeFile } from 'node:fs/promises'
 import { createReadStream, createWriteStream, constants } from 'node:fs'
 import { createInterface } from 'node:readline'
 
 const indexFile = 'index.jsonl'
 
-export type IndexEvent = PathEvent | IndexedEvent
 export interface PathEvent extends Event {
-  type: 'created' | 'updated'
   path: string
 }
-export interface IndexedEvent extends Event {
+export interface IndexedEvent {
   type: 'created' | 'updated'
   path: string
   size: number
 }
 
-export async function updateIndex(file: string, ev: Event): Promise<number> {
+// Resolver<PathEvent>
+export function canIndex(ev: Partial<PathEvent>): ev is PathEvent & { type: 'created' | 'updated' } {
+  if (typeof ev.path !== 'string') return false
+  if (ev.path.length <= 1) return false
+  if (ev.path.endsWith(indexFile)) return false
+  if (!(ev.type === 'created' || ev.type === 'updated')) return false
+  return true
+}
+
+async function prepare(ev: PathEvent): Promise<{ file: string; event: PathEvent; parent: string }> {
+  const [, parent, name] = /(.*)\/([^/]*)$/.exec(ev.path) || []
+  const event = { ...ev, id: name }
+  const dir = join('data', parent)
+  await mkdir(dir, { recursive: true })
+  const file = join(dir, indexFile)
+  return { file, event, parent }
+}
+
+// Listener<PathEvent>
+export async function createIndex(ev: PathEvent): Promise<IndexedEvent> {
+  const { file, event, parent } = await prepare(ev)
+  await writeFile(file, JSON.stringify(event) + '\n')
+  const result: IndexedEvent = { type: 'created', path: parent, size: 1 }
+  core.emit<IndexedEvent & Event>(result)
+  return result
+}
+
+// Listener<PathEvent>
+export async function updateIndex(ev: PathEvent): Promise<IndexedEvent> {
+  const { file, event, parent } = await prepare(ev)
   await access(file, constants.R_OK)
   const before = await stat(file)
   const newFile = join(dirname(file), new Date().getTime() + '.jsonl')
@@ -29,13 +56,13 @@ export async function updateIndex(file: string, ev: Event): Promise<number> {
     rl.on('line', (line) => {
       size++
       const index = JSON.parse(line)
-      if (index.id !== ev.id) return w.write(line + '\n')
-      w.write(JSON.stringify(ev) + '\n')
+      if (index.id !== event.id) return w.write(line + '\n')
+      w.write(JSON.stringify(event) + '\n')
       updated = true
     })
     rl.on('close', () => {
       if (!updated) {
-        w.write(JSON.stringify(ev) + '\n')
+        w.write(JSON.stringify(event) + '\n')
         size++
       }
       w.close()
@@ -46,28 +73,18 @@ export async function updateIndex(file: string, ev: Event): Promise<number> {
   if (before.mtimeMs !== after.mtimeMs) throw Error('mtime different.')
   await rm(file, { force: true })
   await rename(newFile, file)
-  return size
+  const result: IndexedEvent = { type: 'updated', path: parent, size }
+  core.emit<IndexedEvent & Event>(result)
+  return result
 }
 
-export const canIndexResolver: Resolver<PathEvent> = (ev) =>
-  typeof ev.path === 'string' &&
-  ev.path.length > 1 &&
-  !ev.path.endsWith(indexFile) &&
-  (ev.type === 'created' || ev.type === 'updated')
-
-export const createOrUpdateIndexListener: Listener<PathEvent> = async (ev) => {
-  const [, parent, name] = /(.*)\/([^/]*)$/.exec(ev.path) || []
-  const event = { ...ev, id: name }
-  const dir = join('data', parent)
-  await mkdir(dir, { recursive: true })
-  const file = join(dir, indexFile)
+// Listener<PathEvent>
+export async function createOrUpdateIndex(ev: PathEvent): Promise<IndexedEvent> {
   try {
-    const size = await updateIndex(file, event)
-    core.emit<IndexedEvent>({ type: 'updated', path: parent, size })
+    return await updateIndex(ev)
   } catch {
-    await writeFile(file, JSON.stringify(event) + '\n')
-    core.emit<IndexedEvent>({ type: 'created', path: parent, size: 1 })
+    return await createIndex(ev)
   }
 }
 
-core.on<PathEvent>(canIndexResolver, createOrUpdateIndexListener)
+core.on(canIndex, createOrUpdateIndex)
