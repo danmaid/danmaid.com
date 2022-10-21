@@ -1,11 +1,11 @@
 import { v4 as uuid } from 'uuid'
 
 export interface Event {
-  event_id: string
-  event_date: Date
+  id: string
+  date: Date
   type?: string
 }
-export type Resolver<T extends Event = Event> = (event: T) => boolean
+export type Resolver<T extends Event = Event> = (event: Partial<T>) => boolean
 export type Listener<T extends Event = Event> = (event: T) => void
 
 export function resolveAll(): boolean {
@@ -15,10 +15,10 @@ export function resolveAll(): boolean {
 export class Core {
   listeners: [Resolver, Listener][] = []
 
-  emit<T extends Event>(ev: Omit<T, 'event_id' | 'event_date'> | Omit<T, 'event_id'>): void {
-    const event_id = uuid()
-    const event_date = new Date()
-    const event = { event_id, event_date, ...ev }
+  emit<T extends Event>(ev: Omit<T, 'id' | 'date'> | Omit<T, 'id'>): void {
+    const id = uuid()
+    const date = new Date()
+    const event = { id, date, ...ev }
     this.listeners.filter(([r]) => r(event)).forEach(([_, l]) => l(event))
   }
 

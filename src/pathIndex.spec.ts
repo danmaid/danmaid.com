@@ -1,6 +1,6 @@
 import { core, Event, resolveAll } from './core'
-import { IndexedEvent } from './pathIndex'
 import './pathIndex'
+import { join } from 'path'
 
 it('', async () => {
   const id = new Date().toISOString()
@@ -15,4 +15,30 @@ it('', async () => {
 
   await new Promise((r) => setTimeout(r, 1000))
   console.log(events)
+})
+
+describe('getIndexPath', () => {
+  function getIndexPath(path: string): string {
+    return path.replace(/\/[^/]*$/, '')
+  }
+
+  it('/xxx/yyy/zzz -> /xxx/yyy', async () => {
+    expect(getIndexPath('/xxx/yyy/zzz')).toBe('/xxx/yyy')
+  })
+
+  it('/xxx/yyy/zzz/ -> /xxx/yyy/zzz/', async () => {
+    expect(getIndexPath('/xxx/yyy/zzz/')).toBe('/xxx/yyy/zzz')
+  })
+
+  it('xxx/yyy/zzz -> xxx/yyy', async () => {
+    expect(getIndexPath('xxx/yyy/zzz')).toBe('xxx/yyy')
+  })
+
+  it('join("/xxx/yyy/zzz", "hoge") -> join("/xxx/yyy/hoge")', async () => {
+    expect(join(getIndexPath('/xxx/yyy/zzz'), 'hoge')).toBe(join('/xxx/yyy/hoge'))
+  })
+
+  it('join("/xxx/yyy/zzz/", "hoge") -> join("/xxx/yyy/zzz/hoge")', async () => {
+    expect(join(getIndexPath('/xxx/yyy/zzz/'), 'hoge')).toBe(join('/xxx/yyy/zzz/hoge'))
+  })
 })
