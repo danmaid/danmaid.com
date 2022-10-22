@@ -87,4 +87,22 @@ export async function createOrUpdateIndex(ev: PathEvent): Promise<IndexedEvent> 
   }
 }
 
-core.on(canIndex, createOrUpdateIndex)
+// Listener<PathEvent>
+export async function getIndex<T extends PathEvent, R = Event>(ev: T): Promise<T & R> {
+  const [, parent, name] = /(.*)\/([^/]*)$/.exec(ev.path) || []
+  const dir = join('data', parent)
+  const file = join(dir, indexFile)
+  await access(file, constants.R_OK)
+  const index = await new Promise<R>((resolve, reject) => {
+    const rl = createInterface(createReadStream(file))
+    rl.on('line', (line) => {
+      const index = JSON.parse(line)
+      if (index.id === name) resolve(index)
+    })
+    rl.on('close', () => reject())
+  })
+  const result = { ...ev, ...index }
+  core.emit(result)
+  return result
+}
+

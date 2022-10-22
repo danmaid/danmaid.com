@@ -3,8 +3,7 @@ import { mkdirSync, closeSync, openSync, createWriteStream, createReadStream } f
 import { createInterface } from 'node:readline'
 import { dirname, resolve } from 'node:path'
 import { Readable } from 'node:stream'
-import { core, Event } from './core'
-import { RequestEvent, ResponseEvent } from './http'
+import { Event } from './core'
 
 const dir = 'data/events'
 const indexFile = resolve(dir, 'index.jsonl')
@@ -43,16 +42,16 @@ export function getContent(id: string): Readable {
   return createReadStream(resolve(dir, id))
 }
 
-core.on(() => true, appendIndex)
-core.on<RequestEvent>(
-  (ev) => ev.type === 'request' && ev.method === 'GET' && ev.path === '/events',
-  async (ev) => {
-    const events = await filter(() => true)
-    core.emit<ResponseEvent>({
-      type: 'response',
-      request: ev.request,
-      status: 200,
-      content: Readable.from(JSON.stringify(events)),
-    })
-  }
-)
+// core.on(() => true, appendIndex)
+// core.on<RequestEvent>(
+//   (ev) => ev.type === 'request' && ev.method === 'GET' && ev.path === '/events',
+//   async (ev) => {
+//     const events = await filter(() => true)
+//     core.emit<ResponseEvent>({
+//       type: 'response',
+//       request: ev.request,
+//       status: 200,
+//       content: Readable.from(JSON.stringify(events)),
+//     })
+//   }
+// )

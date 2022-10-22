@@ -1,5 +1,5 @@
 import { core, Event, resolveAll } from './core'
-import './pathIndex'
+import { getIndex, createIndex } from './pathIndex'
 import { join } from 'path'
 
 it('', async () => {
@@ -40,5 +40,13 @@ describe('getIndexPath', () => {
 
   it('join("/xxx/yyy/zzz/", "hoge") -> join("/xxx/yyy/zzz/hoge")', async () => {
     expect(join(getIndexPath('/xxx/yyy/zzz/'), 'hoge')).toBe(join('/xxx/yyy/zzz/hoge'))
+  })
+})
+
+describe('getIndex', () => {
+  it('', async () => {
+    await createIndex({ type: 'created', path: '/xxx/yyy/zzz' } as any)
+    const a = await getIndex({ type: 'request', path: `/xxx/yyy/zzz` } as any)
+    expect(a).toStrictEqual({ type: 'created', path: `/xxx/yyy/zzz`, id: 'zzz' })
   })
 })

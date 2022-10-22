@@ -19,6 +19,7 @@ export class Core {
     const id = uuid()
     const date = new Date()
     const event = { id, date, ...ev }
+    // console.debug(event)
     this.listeners.filter(([r]) => r(event)).forEach(([_, l]) => l(event))
   }
 
