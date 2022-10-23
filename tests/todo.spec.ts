@@ -12,7 +12,9 @@ beforeAll(async () => {
   }
   core.on(
     () => true,
-    (ev) => events.push(ev)
+    (ev) => {
+      events.push(ev)
+    }
   )
 })
 

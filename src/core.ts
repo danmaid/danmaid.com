@@ -1,14 +1,29 @@
 import { v4 as uuid } from 'uuid'
 
+export function isObject(v: any): v is Record<string, unknown> {
+  if (v == null) return false
+  if (typeof v !== 'object') return false
+  return true
+}
+
 export interface Event {
   id: string
   date: Date
   type?: string
 }
+export function isEvent(v: any): v is Event {
+  if (!isObject(v)) return false
+  if (typeof v.id !== 'string') return false
+  if (!(v.date instanceof Date)) return false
+  if (v.type && typeof v.type !== 'string') return false
+  return true
+}
 export type Resolver<T extends Event = Event> = (event: Partial<T>) => boolean
-export type Listener<T extends Event = Event> = (event: T) => void
+export type Listener<T extends Event = Event> = (event: T) => void | Promise<Partial<Event> | void>
 
-export function resolveAll(): boolean {
+export function resolveAll(v: any): v is object {
+  if (v == null) return false
+  if (typeof v !== 'object') return false
   return true
 }
 
@@ -20,7 +35,12 @@ export class Core {
     const date = new Date()
     const event = { id, date, ...ev }
     // console.debug(event)
-    this.listeners.filter(([r]) => r(event)).forEach(([_, l]) => l(event))
+    this.listeners
+      .filter(([resolver]) => resolver(event))
+      .forEach(async ([_, listener]) => {
+        const ev = await listener(event)
+        if (ev) this.emit(ev)
+      })
   }
 
   on<T extends Event>(resolver: Resolver<T>, listener: Listener<T>): void
