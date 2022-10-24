@@ -1,39 +1,17 @@
-import { createServer, IncomingHttpHeaders, OutgoingHttpHeaders, ServerResponse } from 'node:http'
+import { createServer, IncomingHttpHeaders } from 'node:http'
 import { v4 as uuid } from 'uuid'
-import { Event } from './core'
-import { Readable } from 'node:stream'
-import { link, mkdir, appendFile, stat } from 'node:fs/promises'
+import { link, mkdir, appendFile, rm, rename } from 'node:fs/promises'
 import { createWriteStream, mkdirSync, createReadStream } from 'node:fs'
-import { join } from 'node:path'
+import { join, dirname, parse } from 'node:path'
 import { createInterface } from 'node:readline'
 
 const dataDir = 'data'
-const eventDir = join(dataDir, 'events')
+const eventPath = '/events'
+const eventDir = join(dataDir, eventPath)
 const eventIndex = join(eventDir, 'index.jsonl')
 mkdirSync(eventDir, { recursive: true })
 
 export const server = createServer()
-
-export interface ResponseEvent extends Event {
-  type: 'response'
-  request: string
-  status: number
-  statusText?: string
-  headers?: OutgoingHttpHeaders
-  content?: Readable | unknown
-}
-
-export interface RequestEvent extends Event {
-  type: 'request' | 'responded'
-  request: string
-  http?: string
-  method?: string
-  url?: string
-  headers?: IncomingHttpHeaders
-  content?: Readable
-  connection?: string
-  path?: string
-}
 
 server.on('event', (ev) => appendFile(eventIndex, JSON.stringify(ev) + '\n'))
 
@@ -43,7 +21,13 @@ server.on('request', async (req, res) => {
     const id = uuid()
     const client = { address: socket.remoteAddress, family: socket.remoteFamily, port: socket.remotePort }
     const request = { client, http: httpVersion, method, url, ...headers }
-    server.emit('event', { id: uuid(), type: 'request', request: id, ...request })
+    const event = { id: uuid(), date: new Date(), type: 'request', request: id, ...request }
+    server.emit('event', event)
+    res.on('close', () => {
+      const { statusCode: status, statusMessage: message } = res
+      const headers = res.getHeaders()
+      server.emit('event', { id: uuid(), date: new Date(), type: 'response', request: id, status, message, ...headers })
+    })
 
     if (url) {
       const { pathname } = new URL(url, `http://${req.headers.host}`)
@@ -52,49 +36,80 @@ server.on('request', async (req, res) => {
       // PUT
       const length = headers['content-length']
       if (method === 'PUT' && length && parseInt(length) > 0) {
-        const content = join(eventDir, id)
+        const content = join(dataDir, `${eventPath}/${id}`)
         await new Promise((r) => {
-          const w = createWriteStream(content)
-          w.on('finish', r)
-          req.pipe(w)
+          const writer = createWriteStream(content)
+          writer.on('finish', r)
+          req.pipe(writer)
         })
-        await mkdir(file, { recursive: true })
+        await mkdir(dirname(file), { recursive: true })
+        await rm(file, { force: true })
         await link(content, file)
+        const { name, dir } = parse(file)
+        const indexFile = join(dir, 'index.jsonl')
+        const newFile = await new Promise<string>((resolve, reject) => {
+          const rl = createInterface(createReadStream(indexFile))
+          const newFile = `${file}.${new Date().getTime()}`
+          const w = createWriteStream(newFile)
+          rl.on('error', () => resolve(newFile))
+          rl.on('line', (line) => JSON.parse(line).id !== name && w.write(line + '\n'))
+          rl.on('close', () => resolve(newFile))
+        })
+        await appendFile(newFile, JSON.stringify({ ...event, id: name }) + '\n')
+        await rm(indexFile, { force: true })
+        await rename(newFile, indexFile)
         return res.writeHead(200).end()
       }
-
-      // GET
-      if (method === 'GET') {
-        const meta = await new Promise<Record<string, unknown>>((resolve, reject) => {
-          const rl = createInterface(createReadStream(eventIndex))
-          rl.on('line', (line) => resolve())
-        })
-        const stats = await stat(file)
-      }
-
-      // DELETE
-      // PATCH
-      // POST
 
       // SSE
       if (method === 'GET' && headers.accept === 'text/event-stream') {
         res.writeHead(200, { 'Content-Type': 'text/event-stream' })
         const { statusCode: status, statusMessage: message } = res
         const headers = res.getHeaders()
-        server.emit('event', { id: uuid(), type: 'chunked', request: id, status, message, ...headers })
-        server.on('event', (ev: { type?: string; id?: string }) => {
-          if (ev.type) res.write(`event: ${ev.type}\n`)
-          if (ev.id) res.write(`id: ${ev.id}\n`)
-          res.write(`data: ${JSON.stringify(ev)}\n\n`)
+        server.on('event', (ev) => res.write(`data: ${JSON.stringify(ev)}\n\n`))
+        server.emit('event', {
+          id: uuid(),
+          date: new Date(),
+          type: 'chunked',
+          request: id,
+          status,
+          message,
+          ...headers,
         })
+        return
       }
+
+      // GET
+      if (method === 'GET') {
+        try {
+          const index = await new Promise<IncomingHttpHeaders>((resolve, reject) => {
+            const [_, parent, name] = /(.*)\/([^/]*)$/.exec(pathname) || []
+            const file = join(dataDir, parent, 'index.jsonl')
+            const rl = createInterface(createReadStream(file))
+            rl.on('error', reject)
+            rl.on('line', (line) => {
+              const index = JSON.parse(line)
+              if (index.id === name) resolve(index)
+            })
+            rl.on('close', reject)
+          })
+          const reader = createReadStream(join(dataDir, pathname))
+          reader.on('error', console.error)
+          res.writeHead(200, {
+            'Content-Length': index['content-length'],
+            'Content-Type': index['content-type'],
+          })
+          return reader.pipe(res)
+        } catch {
+          return res.writeHead(404).end()
+        }
+      }
+
+      // DELETE
+      // PATCH
+      // POST
     }
 
-    res.on('close', () => {
-      const { statusCode: status, statusMessage: message } = res
-      const headers = res.getHeaders()
-      server.emit('event', { id: uuid(), type: 'response', request: id, status, message, ...headers })
-    })
     res.writeHead(501).end()
   } catch (err) {
     console.error(err)
