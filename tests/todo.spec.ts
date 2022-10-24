@@ -67,3 +67,15 @@ it('GET /todo/xxx', async () => {
     })
   )
 })
+
+describe.each`
+  req   | res   | events
+  ${1}  | ${2}  | ${3}
+  ${11} | ${12} | ${13}
+`('title $req', ({ req, res, events }) => {
+  console.log(req, res, events)
+
+  it('hoge', async () => {
+    expect(1).toBe(1)
+  })
+})
