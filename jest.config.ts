@@ -1,9 +1,14 @@
-import type { Config } from '@jest/types'
+import type { Config } from 'jest'
 
-const config: Config.InitialOptions = {
-  preset: 'ts-jest',
-  collectCoverage: true,
-  collectCoverageFrom: ['<rootDir>/src/**/*'],
+export default async (): Promise<Config> => {
+  return {
+    preset: 'ts-jest',
+    collectCoverage: true,
+    collectCoverageFrom: ['<rootDir>/src/**/*'],
+    globalSetup: './tests/setup.ts',
+    globalTeardown: './tests/teardown.ts',
+    globals: {
+      __URL__: 'http://localhost:8520',
+    },
+  }
 }
-
-export default config

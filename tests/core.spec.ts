@@ -1,29 +1,25 @@
-import { server } from '../src'
 import EventSource from 'eventsource'
 import fetch from 'node-fetch'
 
-let url: string
-let sse: EventSource
+const url: string = (globalThis as any).__URL__
 
-beforeAll(async () => {
-  const addr = server.address()
-  if (addr && typeof addr === 'object') {
-    const host = /6/.test(addr.family) ? `[${addr.address}]` : addr.address
-    url = `http://${host}:${addr.port}`
-  }
-})
+export function connectSSE(): EventSource {
+  const sse = new EventSource(url)
 
-afterAll(async () => {
-  sse?.close()
-  server.close()
-})
+  it('readyState が OPEN であること', async () => {
+    if (sse.readyState === EventSource.CONNECTING) {
+      await expect(new Promise((r) => (sse.onopen = r))).resolves.toBeTruthy()
+    }
+    expect(sse.readyState).toBe(EventSource.OPEN)
+  })
 
-it('EventSource (SSE) で接続できること', async () => {
-  sse = new EventSource(url)
-  expect(sse.readyState).toBe(EventSource.CONNECTING)
-  await expect(new Promise((r) => (sse.onopen = r))).resolves.toBeTruthy()
-  expect(sse.readyState).toBe(EventSource.OPEN)
-})
+  afterAll(async () => {
+    sse.close()
+  })
+  return sse
+}
+
+const sse = connectSSE()
 
 it('Request を EventSource に配信すること', async () => {
   const events: any = []

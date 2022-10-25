@@ -1,64 +1,56 @@
-import fetch from 'node-fetch'
-import EventSource from 'eventsource'
-import { server } from '../src/http'
+import fetch, { FetchError } from 'node-fetch'
+import { connectSSE } from './core.spec'
 
-let url: string
-let sse: EventSource
-const events: any[] = []
-beforeAll(async () => {
-  const addr = server.address()
-  if (addr && typeof addr === 'object') {
-    const host = /6/.test(addr.family) ? `[${addr.address}]` : addr.address
-    url = `http://${host}:${addr.port}`
-  }
-})
+interface Todo {
+  tags: ['todo']
+}
 
-afterAll(async () => {
-  console.log(events)
-  sse.close()
-  server.close()
-})
+const url: string = (globalThis as any).__URL__
+const sse = connectSSE()
 
-it('SSE', async () => {
-  sse = new EventSource(url)
+const todo = { tags: ['todo'], title: 'test' }
+let id: string
+
+it('POST { tags: ["todo"], title: "test" } => 201, EventId', async () => {
   const events: any[] = []
   sse.onmessage = (ev) => events.push(JSON.parse(ev.data))
-  await expect(new Promise((r) => (sse.onopen = r))).resolves.toBeTruthy()
-  expect(events).toContainEqual(
-    expect.objectContaining({
-      type: 'chunked',
-      status: 200,
-    })
-  )
-})
-
-it('PUT /todo/xxx', async () => {
-  const events: any[] = []
-  sse.onmessage = (ev) => events.push(JSON.parse(ev.data))
-  const body = JSON.stringify({ title: 'test' })
-  const res = await fetch(url + '/todo/xxx', {
-    method: 'PUT',
+  const res = await fetch(url, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body,
+    body: JSON.stringify(todo),
   })
-  expect(res.status).toBe(200)
+  expect(res.status).toBe(201)
+  id = await res.text()
+  expect(id).toMatch(/^[\w-]+$/)
+  await new Promise((r) => sse.addEventListener('message', r))
   expect(events).toContainEqual(
     expect.objectContaining({
       type: 'request',
-      url: '/todo/xxx',
-      method: 'PUT',
+      url: '/',
+      method: 'POST',
       'content-type': 'application/json',
     })
   )
 })
 
-it('GET /todo/xxx', async () => {
+it('GET /todo', async () => {
   const events: any[] = []
   sse.onmessage = (ev) => events.push(JSON.parse(ev.data))
-  const res = await fetch(url + '/todo/xxx')
+  const res = await fetch(new URL('/todo', url))
   expect(res.status).toBe(200)
   const data = await res.json()
-  expect(data).toStrictEqual({ title: 'test' })
+  expect(data).toBeInstanceOf(Array)
+  expect(data).toContainEqual(todo)
+})
+
+it('GET /todo/{id}', async () => {
+  const events: any[] = []
+  sse.onmessage = (ev) => events.push(JSON.parse(ev.data))
+  const res = await fetch(new URL(`/todo/${id}`, url))
+  // expect(res.status).toBe(200)
+  // const data = await res.json()
+  // expect(data).toStrictEqual({ title: 'test' })
+  // await new Promise((r) => sse.addEventListener('message', r))
   expect(events).toContainEqual(
     expect.objectContaining({
       type: 'request',
@@ -66,16 +58,4 @@ it('GET /todo/xxx', async () => {
       method: 'GET',
     })
   )
-})
-
-describe.each`
-  req   | res   | events
-  ${1}  | ${2}  | ${3}
-  ${11} | ${12} | ${13}
-`('title $req', ({ req, res, events }) => {
-  console.log(req, res, events)
-
-  it('hoge', async () => {
-    expect(1).toBe(1)
-  })
 })
