@@ -64,4 +64,4 @@ export class Core {
   }
 }
 
-export const core = new Core()
+// export const core = new Core()
