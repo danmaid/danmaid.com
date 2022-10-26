@@ -30,11 +30,10 @@ export function resolveAll(v: any): v is object {
 export class Core {
   listeners: [Resolver, Listener][] = []
 
-  emit<T extends Event>(ev: Omit<T, 'id' | 'date'> | Omit<T, 'id'>): void {
+  emit<T>(ev: T): void {
     const id = uuid()
     const date = new Date()
     const event = { id, date, ...ev }
-    // console.debug(event)
     this.listeners
       .filter(([resolver]) => resolver(event))
       .forEach(async ([_, listener]) => {

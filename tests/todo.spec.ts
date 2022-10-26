@@ -8,6 +8,13 @@ interface Todo {
 const url: string = (globalThis as any).__URL__
 const sse = connectSSE()
 
+const t = {
+  tags: ['todo'],
+  title: 'test',
+  type: 'created',
+  resource: 'todo'
+}
+
 const todo = { tags: ['todo'], title: 'test' }
 let id: string
 
@@ -22,13 +29,30 @@ it('POST { tags: ["todo"], title: "test" } => 201, EventId', async () => {
   expect(res.status).toBe(201)
   id = await res.text()
   expect(id).toMatch(/^[\w-]+$/)
-  await new Promise((r) => sse.addEventListener('message', r))
+  // await new Promise((r) => sse.addEventListener('message', r))
   expect(events).toContainEqual(
     expect.objectContaining({
       type: 'request',
       url: '/',
       method: 'POST',
       'content-type': 'application/json',
+    })
+  )
+})
+
+it('GET /{id}', async () => {
+  const events: any[] = []
+  sse.onmessage = (ev) => events.push(JSON.parse(ev.data))
+  const res = await fetch(new URL(`/${id}`, url))
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toStrictEqual(todo)
+  // await new Promise((r) => sse.addEventListener('message', r))
+  expect(events).toContainEqual(
+    expect.objectContaining({
+      type: 'request',
+      url: `/${id}`,
+      method: 'GET',
     })
   )
 })
@@ -43,13 +67,13 @@ it('GET /todo', async () => {
   expect(data).toContainEqual(todo)
 })
 
-it('GET /todo/{id}', async () => {
+it.skip('GET /todo/{id}', async () => {
   const events: any[] = []
   sse.onmessage = (ev) => events.push(JSON.parse(ev.data))
   const res = await fetch(new URL(`/todo/${id}`, url))
-  // expect(res.status).toBe(200)
-  // const data = await res.json()
-  // expect(data).toStrictEqual({ title: 'test' })
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toStrictEqual({ title: 'test' })
   // await new Promise((r) => sse.addEventListener('message', r))
   expect(events).toContainEqual(
     expect.objectContaining({
