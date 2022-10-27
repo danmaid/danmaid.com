@@ -48,3 +48,10 @@ core.on(
     }
   }
 )
+
+async function updateIndex(path: string, value: { id: string }) {
+  const parent = path.replace(/\/[^/]+$/, '')
+  if (!parent) return
+  await new FileIndex(parent).set(value)
+  await updateIndex(parent, value)
+}
