@@ -42,6 +42,7 @@ export class Core {
       })
   }
 
+  on<T>(resolver: Resolver, listener: Listener): void
   on<T extends Event>(resolver: Resolver<T>, listener: Listener<T>): void
   on(resolver: Resolver, listener: Listener): void {
     this.listeners.push([resolver, listener])

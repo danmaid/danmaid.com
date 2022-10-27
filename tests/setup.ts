@@ -1,11 +1,10 @@
-import { Core } from '../src'
+import server from '../src/index2'
 
 declare global {
-  var __CORE__: Core
+  var __CORE__: any
 }
 
 export default async function () {
-  const server = new Core()
   await new Promise<void>((r) => server.listen(8520, r))
   globalThis.__CORE__ = server
 }
