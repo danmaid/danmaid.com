@@ -6,7 +6,7 @@ import { Readable } from 'node:stream'
 
 export interface RequestEvent {
   type: 'request'
-  id: string
+  request: string
   connection?: string
   http: string
   method?: string
@@ -14,9 +14,7 @@ export interface RequestEvent {
   path: string
   query: Record<string, string>
   hash: string
-  headers: IncomingHttpHeaders
   content?: IncomingMessage
-  'content-length'?: number
 }
 export function isRequestEvent(ev: any): ev is RequestEvent {
   if (ev.type !== 'request') return false
@@ -28,7 +26,6 @@ export function isRequestEvent(ev: any): ev is RequestEvent {
 
 export interface ResponseEvent {
   type: 'response'
-  id: string
   request: string
   status?: number
   message?: string
@@ -81,8 +78,9 @@ export class HttpServer extends Server {
     const query = Object.fromEntries(searchParams)
 
     const event: RequestEvent = {
+      ...headers,
       type: 'request',
-      id,
+      request: id,
       connection: socket.id,
       http: httpVersion,
       method,
@@ -90,17 +88,14 @@ export class HttpServer extends Server {
       path: pathname,
       query,
       hash,
-      headers,
     }
-    if (headers['content-length']) {
-      event['content-length'] = parseInt(headers['content-length'])
-      event.content = req
-    }
+    if (headers['content-length']) event.content = req
+
     this.core.emit(event)
   }
 
   async onresponse(ev: ResponseEvent) {
-    const { request, headers, status, message, content, id } = ev
+    const { request, headers, status, message, content } = ev
     const res = this.responses.get(request)
     if (!res) return
     if (headers) Object.entries(headers).forEach(([k, v]) => v && res.setHeader(k, v))
@@ -108,7 +103,7 @@ export class HttpServer extends Server {
     if (message) res.statusMessage = message
     content ? content.pipe(res) : res.end()
     await new Promise((r) => res.on('finish', r))
-    this.core.emit({ type: 'responded', request, response: id })
+    this.core.emit({ type: 'responded', request })
   }
 
   onconnection(socket: Socket & { id?: string }) {

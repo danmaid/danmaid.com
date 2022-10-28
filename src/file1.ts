@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { core, Event } from './core'
 
 export interface SavedEvent extends Stats {
-  type: 'saved'
+  type: 'loaded'
   file: string
   content?: string
 }
@@ -40,7 +40,7 @@ export async function saveContent(
   const content = ev.content
   await saveStream(path, ev.content)
   const stats = await stat(path)
-  return { type: 'saved', file: path, content: ev.id, ...stats }
+  return { type: 'loaded', file: path, content: ev.id, ...stats }
 }
 
 async function saveStream(file: string, stream: Readable): Promise<void> {
@@ -62,7 +62,7 @@ export async function appendIndex(ev: Event & Partial<PathEvent>, options: { fil
   await access(indexFile, constants.O_APPEND).catch(() => mkdir(dirname(indexFile), { recursive: true }))
   await appendFile(indexFile, JSON.stringify(ev, replacer) + '\n')
   const stats = await stat(indexFile)
-  return { type: 'saved', file: indexFile, ...stats }
+  return { type: 'loaded', file: indexFile, ...stats }
 }
 
 export async function linkContent(ev: PathEvent & ContentEvent, options: { path: string } = ev): Promise<SavedEvent> {
@@ -74,7 +74,7 @@ export async function linkContent(ev: PathEvent & ContentEvent, options: { path:
     .catch(() => mkdir(dirname(dest), { recursive: true }))
   await link(src, dest)
   const stats = await stat(dest)
-  return { type: 'saved', file: dest, ...stats }
+  return { type: 'loaded', file: dest, ...stats }
 }
 
 export interface FileEvent {

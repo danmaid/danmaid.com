@@ -19,7 +19,8 @@ beforeAll(async () => {
 afterAll(async () => {
   await new Promise((r) => server.close(r))
 })
-afterEach(() => {
+afterEach(async () => {
+  await new Promise((r) => setTimeout(r, 1000))
   console.debug(events)
   events.splice(0, events.length)
 })
@@ -52,7 +53,7 @@ it('GET /todo/yyy -> 404', async () => {
 })
 
 const body = JSON.stringify({ title: 'PUT /todo/xxx' })
-it('PUT /todo/xxx', async () => {
+it.only('PUT /todo/xxx', async () => {
   const res = await fetch(new URL('/todo/xxx', url), {
     method: 'PUT',
     body,
@@ -63,7 +64,7 @@ it('PUT /todo/xxx', async () => {
   await core.wait((ev: any) => ev.type === 'disconnected')
 })
 
-it('GET /todo/xxx -> 200', async () => {
+it.only('GET /todo/xxx -> 200', async () => {
   const res = await fetch(new URL('/todo/xxx', url))
   expect(res.ok).toBe(true)
   expect(res.status).toBe(200)
