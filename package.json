@@ -8,7 +8,9 @@
     "dev": "ts-node src/dev",
     "build": "tsc",
     "build:web": "npm run build -w packages/web",
-    "serve": "node dist"
+    "start": "pm2 start --name danmaid.com dist/cli.js -- start",
+    "stop": "pm2 stop danmaid.com",
+    "status": "pm2 status"
   },
   "repository": {
     "type": "git",
@@ -41,9 +43,11 @@
     "vue-tsc": "^0.38.1"
   },
   "dependencies": {
+    "commander": "^9.4.1",
     "cors": "^2.8.5",
     "express": "^4.18.1",
     "morgan": "^1.10.0",
+    "pm2": "^5.2.2",
     "uuid": "^8.3.2",
     "ws": "^8.8.0"
   },
