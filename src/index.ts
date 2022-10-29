@@ -1,5 +1,10 @@
-import './core'
-import './events'
-import './http'
+import http from 'node:http'
+import express from 'express'
+import { todos } from './todos'
 
-export { server } from './http'
+export class Server extends http.Server {
+  constructor(public app = express()) {
+    super(app)
+    app.use(todos)
+  }
+}
