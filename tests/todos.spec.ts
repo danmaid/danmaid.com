@@ -197,3 +197,33 @@ describe('フィルタ', () => {
     expect(data).toHaveLength(1)
   })
 })
+
+describe('コメント', () => {
+  let id: string | undefined
+  beforeAll(async () => {
+    const res = await fetch(url + '/todos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'test' }),
+    })
+    expect(res.ok).toBe(true)
+    id = await res.json()
+  })
+  afterAll(async () => {
+    const res = await fetch(url + `/todos/${id}`, { method: 'DELETE' })
+    expect(res.ok).toBe(true)
+  })
+
+  it('POST /todos/:id/comments', async () => {
+    const res = await fetch(url + `/todos/${id}/comments`, { method: 'POST', body: 'comment' })
+    expect(res.status).toBe(201)
+    expect(res.ok).toBe(true)
+  })
+
+  it('GET /todos/:id -> todo with comment', async () => {
+    const res = await fetch(url + `/todos/${id}`, { headers: { accept: 'application/json' } })
+    expect(res.ok).toBe(true)
+    const data = await res.json()
+    expect(data).toMatchObject({ comments: ['comment'] })
+  })
+})

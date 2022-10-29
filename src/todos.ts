@@ -1,4 +1,4 @@
-import { Router, json } from 'express'
+import { Router, json, text } from 'express'
 import { v4 as uuid } from 'uuid'
 import { readdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { mkdirSync } from 'node:fs'
@@ -10,6 +10,7 @@ const dir = './data/todos'
 mkdirSync(dir, { recursive: true })
 
 todos.use(json())
+todos.use(text())
 
 const items = todos.route('/todos')
 
@@ -64,6 +65,21 @@ item.patch(async ({ params: { id }, body }, res, next) => {
     const data = JSON.parse(text)
     await writeFile(join(dir, id), JSON.stringify({ ...data, ...body }))
     res.end()
+  } catch {
+    res.sendStatus(404)
+  }
+})
+
+const comments = todos.route('/todos/:id/comments')
+
+comments.post(async ({ params: { id }, body }, res, next) => {
+  try {
+    const text = await readFile(join(dir, id), { encoding: 'utf-8' })
+    const data = JSON.parse(text)
+    const comments: string[] = data.comments || []
+    comments.push(body)
+    await writeFile(join(dir, id), JSON.stringify({ ...data, comments }))
+    res.sendStatus(201)
   } catch {
     res.sendStatus(404)
   }
