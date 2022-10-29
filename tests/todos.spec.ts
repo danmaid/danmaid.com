@@ -226,4 +226,50 @@ describe('コメント', () => {
     const data = await res.json()
     expect(data).toMatchObject({ comments: ['comment'] })
   })
+
+  it('POST /todos/notfound/comments', async () => {
+    const res = await fetch(url + '/todos/notfound/comments', { method: 'POST', body: 'comment' })
+    expect(res.status).toBe(404)
+    expect(res.ok).toBe(false)
+  })
+})
+
+describe('イベント', () => {
+  let id: string | undefined
+  beforeAll(async () => {
+    const res = await fetch(url + '/todos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'test' }),
+    })
+    id = await res.json()
+    await fetch(url + `/todos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'doing' }),
+    })
+    await fetch(url + `/todos/${id}/comments`, { method: 'POST', body: 'comment' })
+    await fetch(url + `/todos/${id}`, { method: 'DELETE' })
+  })
+
+  it('Date 判定', async () => {
+    expect(!!new Date().getTime()).toBe(true)
+    expect(!!new Date('').getTime()).toBe(false)
+    expect(!!new Date('invalid').getTime()).toBe(false)
+    expect(!!new Date(111).getTime()).toBe(true)
+    expect(!!new Date(new Date().toISOString()).getTime()).toBe(true)
+  })
+
+  it('GET /todos/:id/events', async () => {
+    const res = await fetch(url + `/todos/${id}/events`, { headers: { accept: 'application/json' } })
+    expect(res.status).toBe(200)
+    expect(res.ok).toBe(true)
+    const data: Record<string, unknown>[] = await res.json()
+    expect(data).toStrictEqual([
+      expect.objectContaining({ todo: id, type: 'created', title: 'test' }),
+      expect.objectContaining({ todo: id, type: 'updated', status: 'doing' }),
+      expect.objectContaining({ todo: id, type: 'created', message: 'comment' }),
+      expect.objectContaining({ todo: id, type: 'deleted' }),
+    ])
+  })
 })
