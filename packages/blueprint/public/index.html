@@ -3,13 +3,15 @@
   <head>
     <title>Todo List</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="stub.js" type="module"></script>
+    <script src="stub.js"></script>
   </head>
 
   <body>
     <div>
       <button onclick="load()">refresh</button>
       <button onclick="attachEvents()">events</button>
+      <button onclick="registerStub()">register stub</button>
+      <button onclick="unregisterStub()">unregister stub</button>
     </div>
     <table style="width: 100%; table-layout: fixed">
       <thead>
@@ -50,9 +52,7 @@
 
     <script>
       async function load() {
-        const res = await fetch('/todos', {
-          headers: { Accept: 'application/vnd.danmaid+json' },
-        })
+        const res = await fetch('/todos?status=!done')
         const todos = await res.json()
         const template = document.querySelector('template#list-item')
         const tbody = document.getElementById('tbody')
@@ -86,7 +86,7 @@
       async function add(form) {
         const res = await fetch('/todos', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/vnd.danmaid+json' },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: form.title.value }),
         })
         if (res.ok) {
@@ -98,7 +98,7 @@
       async function patch(id, patch) {
         const res = await fetch(`/todos/${id}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/vnd.danmaid+json' },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(patch),
         })
         if (res.ok) load()

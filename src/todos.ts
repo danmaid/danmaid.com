@@ -13,14 +13,22 @@ todos.use(json())
 
 const items = todos.route('/todos')
 
-items.get(async (req, res, next) => {
+items.get(async ({ query }, res, next) => {
   const files = await readdir(dir)
   const items = files.map(async (file) => {
     const text = await readFile(join(dir, file), { encoding: 'utf-8' })
     const data = JSON.parse(text)
     return { ...data, id: file }
   })
-  res.json(await Promise.all(items))
+  const data = await Promise.all(items)
+  if (Object.keys(query).length > 0) {
+    const filtered = data.filter((item) => {
+      return Object.entries(query).every(([k, v]) => {
+        return typeof v === 'string' && v.startsWith('!') ? item[k] !== v.slice(1) : item[k] === v
+      })
+    })
+    res.json(filtered)
+  } else res.json(data)
 })
 
 items.post(async ({ body }, res, next) => {
@@ -46,6 +54,17 @@ item.delete(async ({ params: { id } }, res, next) => {
     await rm(join(dir, id))
     res.end()
   } catch (err) {
+    res.sendStatus(404)
+  }
+})
+
+item.patch(async ({ params: { id }, body }, res, next) => {
+  try {
+    const text = await readFile(join(dir, id), { encoding: 'utf-8' })
+    const data = JSON.parse(text)
+    await writeFile(join(dir, id), JSON.stringify({ ...data, ...body }))
+    res.end()
+  } catch {
     res.sendStatus(404)
   }
 })

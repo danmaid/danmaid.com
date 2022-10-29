@@ -178,7 +178,7 @@
           const body = { title: 'test-todo' }
           const req = new Request('/todos', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/vnd.danmaid+json' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
           })
 
@@ -222,7 +222,7 @@
           const body = { status: 'doing' }
           const req = new Request(`/todos/${id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/vnd.danmaid+json' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
           })
 
@@ -294,7 +294,7 @@
           const body = { status: 'done' }
           const req = new Request(`/todos/${id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/vnd.danmaid+json' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
           })
 
