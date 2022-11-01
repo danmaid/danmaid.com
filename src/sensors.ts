@@ -1,15 +1,13 @@
 import { Router, json } from 'express'
-import { v4 as uuid } from 'uuid'
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { events as eventStore } from './events'
 
 export const sensors = Router()
 
 const dir = './data/sensors'
 mkdirSync(dir, { recursive: true })
-const eventDir = './data/events'
-mkdirSync(eventDir, { recursive: true })
 
 sensors.use(json())
 
@@ -48,22 +46,15 @@ item.get(async ({ params: { id } }, res, next) => {
 const events = sensors.route('/sensors/:id/events')
 
 events.post(async ({ params: { id }, body }, res, next) => {
+  const eventId = await eventStore.add({ ...body, date: new Date(), sensor: id })
   try {
     const text = await readFile(join(dir, id), { encoding: 'utf-8' })
     const sensor = JSON.parse(text)
 
-    const eventId = uuid()
-    const event = { ...body, date: new Date(), sensor: id }
-    await writeFile(join(eventDir, eventId), JSON.stringify(event))
-
     await writeFile(join(dir, id), JSON.stringify({ ...sensor, ...body, event: eventId }))
     res.sendStatus(201)
   } catch {
-    const eventId = uuid()
-    const event = { ...body, date: new Date(), sensor: id }
-    await writeFile(join(eventDir, eventId), JSON.stringify(event))
-
-    await writeFile(join(dir, id), JSON.stringify({ ...event, event: eventId, ...body }))
+    await writeFile(join(dir, id), JSON.stringify({ ...body, event: eventId }))
     res.sendStatus(201)
   }
 })

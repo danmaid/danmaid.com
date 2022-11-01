@@ -3,13 +3,12 @@ import { v4 as uuid } from 'uuid'
 import { readdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { events as eventStore } from './events'
 
 export const todos = Router()
 
 const dir = './data/todos'
 mkdirSync(dir, { recursive: true })
-const eventDir = './data/events'
-mkdirSync(eventDir, { recursive: true })
 
 todos.use(json())
 todos.use(text())
@@ -36,9 +35,9 @@ items.get(async ({ query }, res, next) => {
 
 items.post(async ({ body }, res, next) => {
   const id = uuid()
-  const eventId = uuid()
   const event = { ...body, date: new Date(), type: 'created', todo: id }
-  await writeFile(join(eventDir, eventId), JSON.stringify(event))
+  const eventId = await eventStore.add(event)
+
   await writeFile(join(dir, id), JSON.stringify({ ...body, last_event: { ...event, event: eventId } }))
   res.status(201).json(id)
 })
@@ -57,9 +56,7 @@ item.get(async ({ params: { id } }, res, next) => {
 
 item.delete(async ({ params: { id } }, res, next) => {
   try {
-    const eventId = uuid()
-    const event = { date: new Date(), type: 'deleted', todo: id }
-    await writeFile(join(eventDir, eventId), JSON.stringify(event))
+    await eventStore.add({ date: new Date(), type: 'deleted', todo: id })
 
     await rm(join(dir, id))
     res.end()
@@ -70,9 +67,8 @@ item.delete(async ({ params: { id } }, res, next) => {
 
 item.patch(async ({ params: { id }, body }, res, next) => {
   try {
-    const eventId = uuid()
     const event = { ...body, date: new Date(), type: 'updated', todo: id }
-    await writeFile(join(eventDir, eventId), JSON.stringify(event))
+    const eventId = await eventStore.add(event)
 
     const text = await readFile(join(dir, id), { encoding: 'utf-8' })
     const data = JSON.parse(text)
@@ -92,9 +88,8 @@ comments.post(async ({ params: { id }, body }, res, next) => {
     const comments: string[] = data.comments || []
     comments.push(body)
 
-    const eventId = uuid()
     const event = { date: new Date(), type: 'created', todo: id, message: body }
-    await writeFile(join(eventDir, eventId), JSON.stringify(event))
+    const eventId = await eventStore.add(event)
 
     await writeFile(join(dir, id), JSON.stringify({ ...data, comments, last_event: { ...event, event: eventId } }))
     res.sendStatus(201)
@@ -106,12 +101,6 @@ comments.post(async ({ params: { id }, body }, res, next) => {
 const events = todos.route('/todos/:id/events')
 
 events.get(async ({ params: { id } }, res, next) => {
-  const files = await readdir(eventDir)
-  const items = files.map(async (file): Promise<{ date: string; todo: string }> => {
-    const text = await readFile(join(eventDir, file), { encoding: 'utf-8' })
-    const data = JSON.parse(text)
-    return { ...data, event: file }
-  })
-  const data = await Promise.all(items)
-  res.json(data.filter((v) => v.todo === id).sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0)))
+  const events = await eventStore.filter((v) => v.event.todo === id)
+  res.json(events.map((v) => v.event))
 })

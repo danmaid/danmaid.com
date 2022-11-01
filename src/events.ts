@@ -1,58 +1,34 @@
-import { appendFile } from 'node:fs/promises'
-import { mkdirSync, closeSync, openSync, createWriteStream, createReadStream } from 'node:fs'
-import { createInterface } from 'node:readline'
-import { dirname, resolve } from 'node:path'
-import { Readable } from 'node:stream'
-import { core, Event } from './core'
-import { RequestEvent, ResponseEvent } from './http'
+import { mkdirSync } from 'node:fs'
+import { EventEmitter } from 'node:events'
+import { v4 as uuid } from 'uuid'
+import { join } from 'node:path'
+import { readdir, readFile, writeFile } from 'node:fs/promises'
 
-const dir = 'data/events'
-const indexFile = resolve(dir, 'index.jsonl')
+export class EventStore<T = any> extends EventEmitter {
+  dir = './data/events'
 
-mkdirSync(dirname(indexFile), { recursive: true })
-closeSync(openSync(indexFile, 'a'))
-
-interface ContentEvent extends Event {
-  content?: Readable | string
-}
-
-async function appendIndex(ev: ContentEvent): Promise<void> {
-  const event = { ...ev }
-  if (event.content instanceof Readable) {
-    const writer = createWriteStream(resolve(dir, event.id))
-    event.content.pipe(writer)
-    await new Promise((r) => writer.once('finish', r))
-    event.content = '[object Readable]'
+  constructor() {
+    super()
+    mkdirSync(this.dir, { recursive: true })
   }
-  await appendFile(indexFile, JSON.stringify(event) + '\n')
-}
 
-export function filter<T>(filter: (meta: T) => boolean): Promise<T[]> {
-  return new Promise<T[]>((resolve) => {
-    const reader = createInterface(createReadStream(indexFile))
-    const items: T[] = []
-    reader.on('line', (line) => {
-      const event = JSON.parse(line, (k, v) => (k === 'date' ? new Date(v) : v))
-      filter(event) && items.push(event)
-    })
-    reader.on('close', () => resolve(items))
-  })
-}
-
-export function getContent(id: string): Readable {
-  return createReadStream(resolve(dir, id))
-}
-
-core.on(() => true, appendIndex)
-core.on<RequestEvent>(
-  (ev) => ev.type === 'request' && ev.method === 'GET' && ev.path === '/events',
-  async (ev) => {
-    const events = await filter(() => true)
-    core.emit<ResponseEvent>({
-      type: 'response',
-      request: ev.request,
-      status: 200,
-      content: Readable.from(JSON.stringify(events)),
-    })
+  async add(event: T): Promise<string> {
+    const id = uuid()
+    const e = { id, date: new Date(), event }
+    await writeFile(join(this.dir, id), JSON.stringify(e))
+    this.emit('added', e)
+    return id
   }
-)
+
+  async filter(filter: (v: T & { id: string }) => boolean): Promise<(T & { id: string })[]> {
+    const files = await readdir(this.dir)
+    const items = files.map(async (file): Promise<T & { id: string; date: string }> => {
+      const text = await readFile(join(this.dir, file), { encoding: 'utf-8' })
+      return JSON.parse(text)
+    })
+    const data = await Promise.all(items)
+    return data.filter(filter).sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0))
+  }
+}
+
+export const events = new EventStore()
