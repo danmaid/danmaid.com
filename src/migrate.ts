@@ -1,38 +1,23 @@
 // events/files -> events/index.jsonl
-import { existsSync } from 'node:fs'
-import { readdir, readFile, appendFile, rm } from 'node:fs/promises'
+import { existsSync, createReadStream, appendFileSync, renameSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
+import { createInterface } from 'node:readline'
 
 const dir = './data/events'
 const file = join(dir, 'index.jsonl')
 
-if (existsSync(file)) {
-  console.error(`Error: ${file} found.`)
+if (!existsSync(file)) {
+  console.error(`Error: ${file} not found.`)
   process.exit()
 }
 
-Promise.resolve().then(async () => {
-  const files = await readdir(dir)
-  console.log('found files.', files.length)
-
-  const indexes = []
-  for (const id of files) {
-    const data = await readFile(join(dir, id), { encoding: 'utf-8' })
-    const index = JSON.parse(data)
-    indexes.push({ ...index, id })
-  }
-  console.log('read files.', indexes.length)
-
-  indexes.sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0))
-  console.log('sorted.', indexes.length)
-
-  for (const index of indexes) {
-    await appendFile(file, JSON.stringify(index) + '\n')
-  }
-  console.log('index.jsonl created.', indexes.length)
-
-  const removed = await Promise.all(files.map((file) => rm(join(dir, file))))
-  console.log('removed files.', removed.length)
-
-  console.log('done.')
+const rl = createInterface(createReadStream(file))
+rl.on('line', (line) => {
+  const { id, date, ...event } = JSON.parse(line)
+  appendFileSync(join(dir, 'index.jsonl2'), JSON.stringify({ id, date, event }) + '\n')
+})
+rl.on('close', () => {
+  rmSync(file)
+  renameSync(join(dir, 'index.jsonl2'), file)
+  console.log('done')
 })
