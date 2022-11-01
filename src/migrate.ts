@@ -15,12 +15,12 @@ Promise.resolve().then(async () => {
   const files = await readdir(dir)
   console.log('found files.', files.length)
 
-  const r = files.map(async (id) => {
+  const indexes = []
+  for (const id of files) {
     const data = await readFile(join(dir, id), { encoding: 'utf-8' })
     const index = JSON.parse(data)
-    return { ...index, id }
-  })
-  const indexes = await Promise.all(r)
+    indexes.push({ ...index, id })
+  }
   console.log('read files.', indexes.length)
 
   indexes.sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0))
