@@ -3,42 +3,24 @@
   <head>
     <title>Sensors</title>
     <script src="matrix-code.js"></script>
+    <style>
+      :root {
+        background-color: #000;
+        color: #eee;
+      }
+    </style>
   </head>
 
   <body>
     <dm-matrix-code
       id="matrix"
-      style="
-        position: absolute;
-        top: 0;
-        left: 0;
-        z-index: -999;
-        opacity: 0.5;
-        width: 100vw;
-        height: 100vh;
-        overflow: hidden;
-      "
+      style="position: fixed; top: 0; left: 0; z-index: -999; width: 100vw; height: 100vh; overflow: hidden"
     ></dm-matrix-code>
     <script>
       const matrix = document.getElementById('matrix')
 
       const src = new EventSource('/')
       src.onmessage = (ev) => matrix.render(ev.data)
-
-      // function genString() {
-      //   return new Date()
-      //     .toISOString()
-      //     .repeat(6)
-      //     .slice(Math.floor(Math.random() * 300))
-      // }
-
-      // setInterval(() => {
-      //   matrix.render('XYZ'.repeat(100))
-      //   matrix.render(genString())
-      //   matrix.render(genString())
-      //   matrix.render(genString())
-      //   matrix.render(genString())
-      // }, 100)
     </script>
 
     <div>
