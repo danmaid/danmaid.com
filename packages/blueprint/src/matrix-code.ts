@@ -14,6 +14,7 @@ class DmMatrixCode extends HTMLElement {
   set height(v: number) {
     this.canvas.height = v
   }
+  src?: EventSource
 
   constructor() {
     super()
@@ -38,6 +39,12 @@ class DmMatrixCode extends HTMLElement {
     this.context.fillStyle = '#000'
     this.context.fillRect(0, 0, this.width, this.height)
 
+    const url = this.getAttribute('src')
+    if (url) {
+      this.src = new EventSource(url)
+      this.src.onmessage = (ev) => this.render(ev.data)
+    }
+
     this.timer = window.setInterval(() => {
       this.context.fillStyle = '#0001'
       this.context.fillRect(0, 0, this.width, this.height)
@@ -47,6 +54,7 @@ class DmMatrixCode extends HTMLElement {
 
   disconnectedCallback() {
     clearInterval(this.timer)
+    this.src?.close()
   }
 
   render(text: string) {

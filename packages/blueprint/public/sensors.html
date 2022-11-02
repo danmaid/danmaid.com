@@ -8,20 +8,20 @@
         background-color: #000;
         color: #eee;
       }
+      .bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: -999;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+      }
     </style>
   </head>
 
   <body>
-    <dm-matrix-code
-      id="matrix"
-      style="position: fixed; top: 0; left: 0; z-index: -999; width: 100vw; height: 100vh; overflow: hidden"
-    ></dm-matrix-code>
-    <script>
-      const matrix = document.getElementById('matrix')
-
-      const src = new EventSource('/')
-      src.onmessage = (ev) => matrix.render(ev.data)
-    </script>
+    <dm-matrix-code src="/" class="bg"></dm-matrix-code>
 
     <div>
       <button onclick="load()">refresh</button>
