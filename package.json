@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "dev": "ts-node src/dev",
+    "dev": "ts-node src/cli start --blueprint",
     "build": "tsc",
     "build:web": "npm run build -w packages/web",
     "build:blueprint": "npm run build -w packages/blueprint",

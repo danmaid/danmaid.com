@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Matrix code rain</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body style="height: 100vh; margin: 0; overflow: hidden">
+    <canvas id="canv"></canvas>
+    <script>
+      const canvas = document.getElementById('canv')
+      const ctx = canvas.getContext('2d')
+
+      const w = (canvas.width = document.body.offsetWidth)
+      const h = (canvas.height = document.body.offsetHeight)
+
+      ctx.fillStyle = '#000'
+      ctx.fillRect(0, 0, w, h)
+
+      const cols = Math.floor(w / 20) + 1
+      const ypos = Array(cols).fill(0)
+
+      const renders = new Set()
+
+      function render() {
+        ctx.fillStyle = '#0001'
+        ctx.fillRect(0, 0, w, h)
+        renders.forEach((render) => render() || renders.delete(render))
+      }
+
+      function draw(text) {
+        const chars = Array.from(text)
+        const x = Math.random() * canvas.width
+        let y = 0
+        renders.add(() => {
+          const char = chars.shift()
+          ctx.fillStyle = '#aaF'
+          ctx.font = '21px monospace'
+          ctx.fillText(char, x, y)
+          y += 20
+          return chars.length > 0 && y <= canvas.height
+        })
+      }
+      setInterval(() => {
+        const string = () =>
+          new Array(10)
+            .fill(new Date().toISOString())
+            .join()
+            .slice(Math.floor(Math.random() * 200))
+        draw(string())
+        draw(string())
+        draw(string())
+        draw(string())
+        draw(string())
+      }, 100)
+
+      setInterval(render, 50)
+    </script>
+  </body>
+</html>
