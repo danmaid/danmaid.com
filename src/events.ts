@@ -6,6 +6,16 @@ import { appendFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { createInterface } from 'node:readline'
 
+export type EventListener<T = any> = (event: { id: string; date: Date; event: T }) => void
+
+export interface EventStore<T = any> {
+  on(eventName: 'added', listener: EventListener<T>): this
+  on(eventName: string | symbol, listener: (...args: any[]) => void): this
+
+  once(eventName: 'added', listener: (event: { id: string; date: Date; event: T }) => void): this
+  once(eventName: string | symbol, listener: (...args: any[]) => void): this
+}
+
 export class EventStore<T = any> extends EventEmitter {
   dir = './data/events'
   file = join(this.dir, 'index.jsonl')
