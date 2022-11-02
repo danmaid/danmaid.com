@@ -1,127 +1,68 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Todo List</title>
+    <title>Page Title</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="stub.js"></script>
+    <style>
+      :root {
+        background-color: #000;
+        color: #eee;
+      }
+    </style>
   </head>
-
-  <body>
-    <div>
-      <button onclick="load()">refresh</button>
-      <button onclick="attachEvents()">events</button>
-      <button onclick="registerStub()">register stub</button>
-      <button onclick="unregisterStub()">unregister stub</button>
+  <body style="display: flex; flex-direction: column; height: 100vh; margin: 0; padding: 8px; box-sizing: border-box">
+    <div
+      id="out"
+      style="flex: 1 0; background-color: #00f3; display: flex; flex-direction: column-reverse; overflow: auto"
+    ></div>
+    <div id="in" style="flex: 0 0; background-color: #0f03">
+      <input />
+      <div>x</div>
+      <div>y</div>
+      <div>z</div>
     </div>
-    <table style="width: 100%; table-layout: fixed">
-      <thead>
-        <th></th>
-        <th></th>
-        <th></th>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
 
-    <hr />
-    <form name="add-form" style="display: flex" onsubmit="add(this); return false">
-      <textarea id="title" style="flex: 1 1"></textarea>
-      <input type="submit" value="add" />
-    </form>
-
-    <hr />
-    <div id="events"></div>
-
-    <template id="list-item">
-      <tr id="row">
-        <td><input type="text" id="title" /></td>
-        <td><span id="last"></span></td>
-        <td>
-          <select id="status">
-            <option></option>
-            <option value="doing">doing</option>
-            <option value="pause">pause</option>
-            <option value="done">done</option>
-          </select>
-          <input type="checkbox" id="expand" />
-        </td>
-      </tr>
-      <tr>
-        <td colspan="3"><textarea id="comment"></textarea></td>
-      </tr>
-    </template>
+    <div style="position: absolute; top: 0; right: 0">
+      <button onclick="start()">start</button>
+      <button onclick="stop()">stop</button>
+      <button onclick="clearOut()">clear</button>
+    </div>
 
     <script>
-      async function load() {
-        const res = await fetch('/todos?status=!done')
-        const todos = await res.json()
-        const template = document.querySelector('template#list-item')
-        const tbody = document.getElementById('tbody')
-        tbody.textContent = null
-        todos.forEach(({ title, status, last_event, id }) => {
-          const templ = template.content.cloneNode(true)
-          const inputTitle = templ.getElementById('title')
-          inputTitle.value = title
-          inputTitle.onchange = (v) => patch(id, { title: v.target.value })
-          inputTitle.onclick = (e) => e.stopPropagation()
-          templ.getElementById('last').textContent = last_event?.message
-            ? last_event?.message
-            : JSON.stringify(last_event)
-          const inputStatus = templ.getElementById('status')
-          inputStatus.value = status
-          inputStatus.onchange = (v) => patch(id, { status: v.target.value })
-          inputStatus.onclick = (e) => e.stopPropagation()
-          templ.getElementById('expand').onclick = (e) => e.stopPropagation()
-
-          // 2nd row
-          const inputComment = templ.getElementById('comment')
-          inputComment.onchange = (v) => addComment(id, v.target.value)
-          templ.getElementById('row').onclick = (e) => {
-            // 実際は /todos/:id がいい
-            location.href = `detail.html?id=${id}`
-          }
-          tbody.append(templ)
-        })
-      }
-
-      async function add(form) {
-        const res = await fetch('/todos', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: form.title.value }),
-        })
-        if (res.ok) {
-          form.reset()
-          load()
+      class EventSourceStub extends EventTarget {
+        constructor() {
+          super()
+          this.addEventListener('message', (...args) => this.onmessage(...args))
+        }
+        onmessage() {}
+        emit(data) {
+          const event = new MessageEvent('message', { data: JSON.stringify(data) })
+          return this.dispatchEvent(event)
         }
       }
 
-      async function patch(id, patch) {
-        const res = await fetch(`/todos/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(patch),
-        })
-        if (res.ok) load()
+      let timer
+      function start() {
+        stop()
+        timer = setInterval(() => src.emit({ date: new Date() }), 500)
       }
-
-      async function addComment(id, comment) {
-        const res = await fetch(`/todos/${id}/comments`, {
-          method: 'POST',
-          body: comment,
-        })
-        if (res.ok) load()
+      function stop() {
+        clearInterval(timer)
       }
-
-      async function attachEvents() {
-        const events = new EventSource('/todos')
-        events.onmessage = ({ data }) => {
-          const event = document.createElement('div')
-          event.textContent = data
-          document.getElementById('events').append(event)
-        }
+      function clearOut() {
+        out.innerHTML = ''
       }
+    </script>
+    <script>
+      // const src = new EventSource('/')
+      const src = new EventSourceStub()
 
-      window.addEventListener('load', () => load())
+      const out = document.getElementById('out')
+      src.onmessage = (ev) => {
+        const div = document.createElement('div')
+        div.textContent = ev.data
+        out.append(div)
+      }
     </script>
   </body>
 </html>
