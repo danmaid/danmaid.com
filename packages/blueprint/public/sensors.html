@@ -22,20 +22,23 @@
     <script>
       const matrix = document.getElementById('matrix')
 
-      function genString() {
-        return new Date()
-          .toISOString()
-          .repeat(6)
-          .slice(Math.floor(Math.random() * 300))
-      }
+      const src = new EventSource('/')
+      src.onmessage = (ev) => matrix.render(ev.data)
 
-      setInterval(() => {
-        matrix.render('XYZ'.repeat(100))
-        matrix.render(genString())
-        matrix.render(genString())
-        matrix.render(genString())
-        matrix.render(genString())
-      }, 100)
+      // function genString() {
+      //   return new Date()
+      //     .toISOString()
+      //     .repeat(6)
+      //     .slice(Math.floor(Math.random() * 300))
+      // }
+
+      // setInterval(() => {
+      //   matrix.render('XYZ'.repeat(100))
+      //   matrix.render(genString())
+      //   matrix.render(genString())
+      //   matrix.render(genString())
+      //   matrix.render(genString())
+      // }, 100)
     </script>
 
     <div>

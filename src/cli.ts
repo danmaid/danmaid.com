@@ -11,7 +11,13 @@ program
   .action(({ port, blueprint }) => {
     const app = express()
     app.use(morgan('combined'))
-    if (blueprint) app.use(express.static('packages/blueprint/public'))
+    if (blueprint) {
+      const serve = express.static('packages/blueprint/public')
+      app.use((req, res, next) => {
+        if (req.accepts().includes('text/event-stream')) next()
+        else serve(req, res, next)
+      })
+    }
     const server = new Server(app)
     server.listen(port)
   })
