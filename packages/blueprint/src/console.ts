@@ -7,7 +7,7 @@ class DmConsole extends HTMLElement {
     const root = this.attachShadow({ mode: 'open' })
     root.innerHTML = `
       <div style="display: flex; flex-direction: column; height: 100%">
-        <div id="out" style="flex: 1 0; background-color: #00f3; display: flex; flex-direction: column-reverse; overflow: auto"></div>
+        <div id="out" style="flex: 1 0; background-color: #00f3; display: flex; flex-direction: column-reverse; overflow: auto; word-break: break-all"></div>
         <div style="flex: 0 0; background-color: #0f03"></div>
       </div>
     `
@@ -32,7 +32,7 @@ class DmConsole extends HTMLElement {
   onmessage(ev: MessageEvent) {
     const div = document.createElement('div')
     div.textContent = ev.data
-    this.out.append(div)
+    this.out.prepend(div)
   }
 
   clear() {
