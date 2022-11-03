@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Input Receipt</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <div>
+      <label for="original">原本</label>
+      <input type="file" id="original" accept="image/*,.pdf" />
+    </div>
+    <div>
+      <label for="date">取引日時</label>
+      <input type="datetime-local" id="date" />
+    </div>
+    <div>
+      <label for="peer">取引先</label>
+      <input id="peer" />
+    </div>
+    <div>
+      <label for="item">品目</label>
+      <input id="item" />
+
+      <label for="total">金額</label>
+      <input id="total" />
+
+      <input type="checkbox" id="tax-in" checked />
+      <label for="tax-in">税込み</label>
+
+      <label for="tax">税</label>
+      <input id="tax" disabled />
+
+      <input type="radio" id="t10" name="tax" value="it10" />
+      <label for="t10">10%</label>
+      <input type="radio" id="t8" name="tax" value="t8" />
+      <label for="t8">8%</label>
+    </div>
+    <div>
+      <div>
+        <span>--- 明細 ---</span>
+        <span>計</span>
+
+        <label for="total">金額</label>
+        <input id="total" disabled />
+
+        <label for="tax">税</label>
+        <input id="tax" disabled disabled />
+      </div>
+      <div>
+        <label for="item">品目</label>
+        <input id="item" />
+
+        <label for="total">金額</label>
+        <input id="total" />
+
+        <input type="checkbox" id="tax-in" checked />
+        <label for="tax-in">税込み</label>
+
+        <label for="tax">税</label>
+        <input id="tax" disabled />
+
+        <input type="radio" id="t10" name="tax" value="it10" />
+        <label for="t10">10%</label>
+        <input type="radio" id="t8" name="tax" value="t8" />
+        <label for="t8">8%</label>
+      </div>
+      <div>
+        <label for="item">品目</label>
+        <input id="item" />
+
+        <label for="total">金額</label>
+        <input id="total" />
+
+        <input type="checkbox" id="tax-in" checked />
+        <label for="tax-in">税込み</label>
+
+        <label for="tax">税</label>
+        <input id="tax" disabled />
+
+        <input type="radio" id="t10" name="tax" value="it10" />
+        <label for="t10">10%</label>
+        <input type="radio" id="t8" name="tax" value="t8" />
+        <label for="t8">8%</label>
+      </div>
+      <button>+</button>
+    </div>
+    <div>
+      <span>--- 複数 ---</span>
+      <div>
+        <label for="item">品目</label>
+        <input id="item" />
+
+        <label for="unit">数量</label>
+        <input type="number" id="unit" />
+
+        <label for="price">単価</label>
+        <input id="price" />
+
+        <label for="total">合計</label>
+        <input id="total" />
+
+        <input type="checkbox" id="tax-in" checked />
+        <label for="tax-in">税込み</label>
+
+        <label for="tax">税</label>
+        <input id="tax" disabled />
+
+        <input type="radio" id="t10" name="tax" value="it10" />
+        <label for="t10">10%</label>
+        <input type="radio" id="t8" name="tax" value="t8" />
+        <label for="t8">8%</label>
+      </div>
+      <span>--- 明細 ---</span>
+      <div>
+        <label for="item">品目</label>
+        <input id="item" />
+
+        <label for="total">金額</label>
+        <input id="total" />
+
+        <input type="checkbox" id="tax-in" checked />
+        <label for="tax-in">税込み</label>
+
+        <label for="tax">税</label>
+        <input id="tax" disabled />
+
+        <input type="radio" id="t10" name="tax" value="it10" />
+        <label for="t10">10%</label>
+        <input type="radio" id="t8" name="tax" value="t8" />
+        <label for="t8">8%</label>
+      </div>
+      <div>
+        <label for="item">品目</label>
+        <input id="item" />
+
+        <label for="total">金額</label>
+        <input id="total" />
+
+        <input type="checkbox" id="tax-in" checked />
+        <label for="tax-in">税込み</label>
+
+        <label for="tax">税</label>
+        <input id="tax" disabled />
+
+        <input type="radio" id="t10" name="tax" value="it10" />
+        <label for="t10">10%</label>
+        <input type="radio" id="t8" name="tax" value="t8" />
+        <label for="t8">8%</label>
+      </div>
+      <div>
+        <label for="total">割引</label>
+        <input id="total" />
+      </div>
+      <button>+</button>
+    </div>
+  </body>
+</html>
