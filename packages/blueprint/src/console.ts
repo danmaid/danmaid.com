@@ -1,6 +1,14 @@
 class DmConsole extends HTMLElement {
   out: HTMLElement
-  src?: EventSource
+  created?: EventSource
+  #src?: EventSource
+  get src(): EventSource | undefined {
+    return this.#src
+  }
+  set src(v: EventSource | undefined) {
+    this.#src = v
+    if (v) v.addEventListener('message', this.onmessage)
+  }
 
   constructor() {
     super()
@@ -19,17 +27,15 @@ class DmConsole extends HTMLElement {
   connectedCallback() {
     if (!this.isConnected) return
     const url = this.getAttribute('src')
-    if (url) {
-      this.src = new EventSource(url)
-      this.src.onmessage = (ev) => this.onmessage(ev)
-    }
+    if (url) this.src = this.created = new EventSource(url)
   }
 
   disconnectedCallback() {
-    this.src?.close()
+    if (this.src) this.src.removeEventListener('message', this.onmessage)
+    if (this.src === this.created) this.src?.close()
   }
 
-  onmessage(ev: MessageEvent) {
+  onmessage = (ev: MessageEvent) => {
     const div = document.createElement('div')
     div.textContent = ev.data
     this.out.prepend(div)

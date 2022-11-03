@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Console</title>
+    <title>index</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="matrix-code.js"></script>
     <script src="console.js"></script>
     <style>
       :root {
@@ -12,40 +13,14 @@
     </style>
   </head>
   <body style="height: 100vh; margin: 0; padding: 8px; box-sizing: border-box">
-    <dm-console id="console" src="/" style="height: 100%"></dm-console>
-
-    <div style="position: absolute; top: 0; right: 0">
-      <button onclick="start()">start</button>
-      <button onclick="stop()">stop</button>
-      <button onclick="console.clear()">clear</button>
-    </div>
+    <dm-console id="console" style="height: 100%"></dm-console>
+    <dm-matrix-code id="matrix"></dm-matrix-code>
 
     <script>
-      class EventSourceStub extends EventTarget {
-        constructor() {
-          super()
-          this.addEventListener('message', (...args) => this.onmessage(...args))
-        }
-        onmessage() {}
-        emit(data) {
-          const event = new MessageEvent('message', { data: JSON.stringify(data) })
-          return this.dispatchEvent(event)
-        }
-      }
-
-      const stub = new EventSourceStub()
-
+      const src = new EventSource('/')
       const console = document.getElementById('console')
-      stub.onmessage = (ev) => console.onmessage(ev)
-
-      let timer
-      function start() {
-        stop()
-        timer = setInterval(() => stub.emit({ date: new Date() }), 500)
-      }
-      function stop() {
-        clearInterval(timer)
-      }
+      const matrix = document.getElementById('matrix')
+      console.src = matrix.src = src
     </script>
   </body>
 </html>

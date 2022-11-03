@@ -14,7 +14,15 @@ class DmMatrixCode extends HTMLElement {
   set height(v: number) {
     this.canvas.height = v
   }
-  src?: EventSource
+  created?: EventSource
+  #src?: EventSource
+  get src(): EventSource | undefined {
+    return this.#src
+  }
+  set src(v: EventSource | undefined) {
+    this.#src = v
+    if (v) v.addEventListener('message', this.onmessage)
+  }
 
   constructor() {
     super()
@@ -40,10 +48,7 @@ class DmMatrixCode extends HTMLElement {
     this.context.fillRect(0, 0, this.width, this.height)
 
     const url = this.getAttribute('src')
-    if (url) {
-      this.src = new EventSource(url)
-      this.src.onmessage = (ev) => this.render(ev.data)
-    }
+    if (url) this.src = this.created = new EventSource(url)
 
     this.timer = window.setInterval(() => {
       this.context.fillStyle = '#0001'
@@ -54,7 +59,8 @@ class DmMatrixCode extends HTMLElement {
 
   disconnectedCallback() {
     clearInterval(this.timer)
-    this.src?.close()
+    if (this.src) this.src.removeEventListener('message', this.onmessage)
+    if (this.src === this.created) this.src?.close()
   }
 
   render(text: string) {
@@ -72,6 +78,8 @@ class DmMatrixCode extends HTMLElement {
       return y <= this.height
     })
   }
+
+  onmessage = (ev: MessageEvent) => this.render(ev.data)
 }
 
 customElements.define('dm-matrix-code', DmMatrixCode)
