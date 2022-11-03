@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Page Title</title>
+    <title>Console</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="console.js"></script>
     <style>
       :root {
         background-color: #000;
@@ -10,22 +11,13 @@
       }
     </style>
   </head>
-  <body style="display: flex; flex-direction: column; height: 100vh; margin: 0; padding: 8px; box-sizing: border-box">
-    <div
-      id="out"
-      style="flex: 1 0; background-color: #00f3; display: flex; flex-direction: column-reverse; overflow: auto"
-    ></div>
-    <div id="in" style="flex: 0 0; background-color: #0f03">
-      <input />
-      <div>x</div>
-      <div>y</div>
-      <div>z</div>
-    </div>
+  <body style="height: 100vh; margin: 0; padding: 8px; box-sizing: border-box">
+    <dm-console id="console" src="/" style="height: 100%"></dm-console>
 
     <div style="position: absolute; top: 0; right: 0">
       <button onclick="start()">start</button>
       <button onclick="stop()">stop</button>
-      <button onclick="clearOut()">clear</button>
+      <button onclick="console.clear()">clear</button>
     </div>
 
     <script>
@@ -41,27 +33,18 @@
         }
       }
 
+      const stub = new EventSourceStub()
+
+      const console = document.getElementById('console')
+      stub.onmessage = (ev) => console.onmessage(ev)
+
       let timer
       function start() {
         stop()
-        timer = setInterval(() => src.emit({ date: new Date() }), 500)
+        timer = setInterval(() => stub.emit({ date: new Date() }), 500)
       }
       function stop() {
         clearInterval(timer)
-      }
-      function clearOut() {
-        out.innerHTML = ''
-      }
-    </script>
-    <script>
-      // const src = new EventSource('/')
-      const src = new EventSourceStub()
-
-      const out = document.getElementById('out')
-      src.onmessage = (ev) => {
-        const div = document.createElement('div')
-        div.textContent = ev.data
-        out.append(div)
       }
     </script>
   </body>
