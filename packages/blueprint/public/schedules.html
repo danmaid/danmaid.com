@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>schedule</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        background-color: #000;
+        color: #eee;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <button onclick="load()">refresh</button>
+    </div>
+
+    <hr />
+    <table style="width: 100%; table-layout: fixed">
+      <thead>
+        <th></th>
+        <th></th>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <hr />
+    <form name="add-form" style="display: flex" onsubmit="add(this); return false">
+      <input type="date" name="date" />
+      <textarea name="title" style="flex: 1 1"></textarea>
+      <input type="submit" value="add" />
+    </form>
+
+    <template id="row">
+      <tr>
+        <td><input type="text" id="title" /></td>
+        <td><input type="date" id="date" /></td>
+      </tr>
+    </template>
+
+    <script>
+      function getDateString(date) {
+        const YYYY = date.getFullYear()
+        const MM = String(date.getMonth() + 1).padStart(2, '0')
+        const DD = String(date.getDate()).padStart(2, '0')
+        return `${YYYY}-${MM}-${DD}`
+      }
+
+      async function load() {
+        const res = await fetch('/schedules')
+        const schedules = await res.json()
+        const template = document.querySelector('template#row')
+        const tbody = document.getElementById('tbody')
+        tbody.textContent = null
+        schedules.forEach(({ title, date, id }) => {
+          const templ = template.content.cloneNode(true)
+          const inputTitle = templ.getElementById('title')
+          inputTitle.value = title
+          inputTitle.onchange = (v) => patch(id, { title: v.target.value })
+          inputTitle.onclick = (e) => e.stopPropagation()
+          const inputDate = templ.getElementById('date')
+          inputDate.value = getDateString(new Date(date))
+          inputDate.onchange = (v) => patch(id, { date: v.target.value })
+          inputDate.onclick = (e) => e.stopPropagation()
+          tbody.append(templ)
+        })
+      }
+
+      async function add(form) {
+        const res = await fetch('/schedules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date: new Date(form.date.value + 'T00:00'),
+            title: form.title.value,
+          }),
+        })
+        if (res.ok) {
+          form.reset()
+          load()
+        }
+      }
+
+      async function patch(id, patch) {
+        const res = await fetch(`/schedules/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patch),
+        })
+        if (res.ok) load()
+      }
+      window.addEventListener('load', () => load())
+    </script>
+  </body>
+</html>
