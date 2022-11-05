@@ -2,7 +2,7 @@ import { Router, json } from 'express'
 import { events } from './events'
 import { v4 as uuid } from 'uuid'
 import { mkdir, writeFile, rm, readFile, readdir } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
 
 const dir = './data'
 
@@ -11,7 +11,11 @@ generic.use(json())
 
 generic.post('*', async ({ body, path }, res) => {
   const id = uuid()
-  await events.add({ ...body, type: 'created', [path.replace(/^\//, '')]: id })
+  const content = { ...body, [path.replace(/^\//, '')]: id }
+  await mkdir(join(dir, path), { recursive: true })
+  await writeFile(join(dir, path, id), JSON.stringify(content))
+
+  await events.add({ ...content, type: 'created' })
   res.status(201).json(id)
 })
 generic.delete('*', async ({ path }, res, next) => {
@@ -32,8 +36,7 @@ generic.patch('*', async ({ body, path }, res, next) => {
     const content = JSON.parse(data)
     await writeFile(join(dir, path), JSON.stringify({ ...content, ...body }))
     const [_, k, v] = /^\/?(.*)\/([^/]+)$/.exec(path) || []
-    const event = { ...body, type: 'updated', [k]: v }
-    await events.add(event)
+    await events.add({ ...body, type: 'updated', [k]: v })
     res.sendStatus(200)
   } catch {
     next()
@@ -73,12 +76,13 @@ generic.get('*', async ({ path, query }, res, next) => {
   }
 })
 
-events.on('created', (ev) => {
+events.on('created', async (ev) => {
   Object.entries(ev).forEach(async ([k, v]) => {
     if (typeof v !== 'string') return
     try {
       const before = await readFile(join(dir, k, v), { encoding: 'utf-8' })
       const content = JSON.parse(before)
+      console.log(k, v, content)
       if (content[k] && content[k] !== v) {
         if (Array.isArray(content[k])) content[k].push(v)
         else content[k] = [content[k], v]
@@ -93,14 +97,19 @@ events.on('created', (ev) => {
   })
 })
 
-events.on('deleted', (ev) => {
+events.on('deleted', async (ev) => {
   const { content, ...keys } = ev
   Object.entries(content).forEach(async ([k, v]) => {
     if (typeof v !== 'string') return
     try {
       const before = await readFile(join(dir, k, v), { encoding: 'utf-8' })
       const content = JSON.parse(before)
-      Object.entries(keys).forEach(([k, v]) => content[k] === v && delete content[k])
+      Object.entries(keys).forEach(([k, v]) => {
+        if (content[k] === v) {
+          console.log('delete', content[k])
+          delete content[k]
+        }
+      })
       const after = JSON.stringify(content)
       if (before === after) return
       await writeFile(join(dir, k, v), after)

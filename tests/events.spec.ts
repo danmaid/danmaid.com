@@ -25,7 +25,7 @@ describe('保持しているイベントが大量でも問題なく動作でき�
       expect(reses.every((res) => res.status === 201)).toBe(true)
     }
     expect.assertions((count / concurrent) * 2)
-  }, 10000)
+  }, 20000)
 
   let id: string | undefined
   it('POST /todos/:id && DELETE /todos/:id', async () => {
@@ -39,6 +39,7 @@ describe('保持しているイベントが大量でも問題なく動作でき�
   })
 
   it('GET /todos/:id/events', async () => {
+    await new Promise((r) => setTimeout(r, 1000))
     const res = await fetch(url + `/todos/${id}/events`, { headers: { accept: 'application/json' } })
     expect(res.status).toBe(200)
     expect(res.ok).toBe(true)
