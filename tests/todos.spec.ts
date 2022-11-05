@@ -11,8 +11,8 @@ beforeAll(async () => (url = getUrl(server.address())))
 describe('基本操作', () => {
   it('GET /todos', async () => {
     const res = await fetch(url + '/todos', { headers: { accept: 'application/json' } })
-    expect(res.ok).toBe(true)
     expect(res.status).toBe(200)
+    expect(res.ok).toBe(true)
     expect(res.headers.get('Content-Type')).toMatch('json')
     const data = await res.json()
     expect(data).toBeInstanceOf(Array)
@@ -266,10 +266,10 @@ describe('イベント', () => {
     expect(res.ok).toBe(true)
     const data: Record<string, unknown>[] = await res.json()
     expect(data).toStrictEqual([
-      expect.objectContaining({ todo: id, type: 'created', title: 'test' }),
-      expect.objectContaining({ todo: id, type: 'updated', status: 'doing' }),
-      expect.objectContaining({ todo: id, type: 'created', message: 'comment' }),
-      expect.objectContaining({ todo: id, type: 'deleted' }),
+      expect.objectContaining({ todos: id, type: 'created', title: 'test' }),
+      expect.objectContaining({ todos: id, type: 'updated', status: 'doing' }),
+      expect.objectContaining({ todos: id, type: 'updated', message: 'comment' }),
+      expect.objectContaining({ todos: id, type: 'deleted' }),
     ])
   })
 })

@@ -10,19 +10,22 @@ export type EventListener<T = any> = (event: { id: string; date: Date; event: T 
 
 export interface EventStore<T = any> {
   on(eventName: 'added', listener: EventListener<T>): this
+  on(eventName: string, listener: (ev: T) => void): this
   on(eventName: string | symbol, listener: (...args: any[]) => void): this
 
   once(eventName: 'added', listener: (event: { id: string; date: Date; event: T }) => void): this
+  once(eventName: string, listener: (ev: T) => void): this
   once(eventName: string | symbol, listener: (...args: any[]) => void): this
 }
 
-export class EventStore<T = any> extends EventEmitter {
+export class EventStore<T extends { type?: string } = any> extends EventEmitter {
   dir = './data/events'
   file = join(this.dir, 'index.jsonl')
 
   constructor() {
     super()
     mkdirSync(this.dir, { recursive: true })
+    this.on('added', ({ event: { type, ...event } }) => typeof type === 'string' && this.emit(type, event))
   }
 
   async add(event: T): Promise<string> {
