@@ -13,7 +13,7 @@ export interface EventStore<T = any> {
   on(eventName: string, listener: (ev: T) => void): this
   on(eventName: string | symbol, listener: (...args: any[]) => void): this
 
-  once(eventName: 'added', listener: (event: { id: string; date: Date; event: T }) => void): this
+  once(eventName: 'added', listener: EventListener<T>): this
   once(eventName: string, listener: (ev: T) => void): this
   once(eventName: string | symbol, listener: (...args: any[]) => void): this
 }

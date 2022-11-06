@@ -1,23 +1,103 @@
-import { Router, json } from 'express'
+import { Router, json, RequestHandler } from 'express'
 import { events } from './events'
 import { v4 as uuid } from 'uuid'
-import { mkdir, writeFile, rm, readFile, readdir } from 'node:fs/promises'
+import { writeFile, rm, readFile, readdir, mkdir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
+import { mkdirSync } from 'node:fs'
 
 const dir = './data'
+const contentsDir = './data/contents'
+mkdirSync(contentsDir, { recursive: true })
 
 export const generic = Router()
 generic.use(json())
 
-generic.post('*', async ({ body, path }, res) => {
-  const id = uuid()
-  const content = { ...body, [path.replace(/^\//, '')]: id }
-  await mkdir(join(dir, path), { recursive: true })
-  await writeFile(join(dir, path, id), JSON.stringify(content))
+async function addIndex(path: string, id: string) {
+  try {
+    const before = await readFile(join(dir, `${path}.json`), { encoding: 'utf-8' })
+    const indexes: Record<string, unknown>[] = JSON.parse(before)
+    const index = indexes.find((v) => v.id === id)
+    if (!index) indexes.push({ id, [path.replace(/^\//, '')]: id })
+    else {
+      const refs = index[path.replace(/^\//, '')]
+      if (refs === id) return
+      if (!refs) index[path.replace(/^\//, '')] = id
+      else if (!Array.isArray(refs)) index[path.replace(/^\//, '')] = [refs, id]
+      else if (refs.includes(id)) return
+      else refs.push(id)
+    }
+    await writeFile(join(dir, `${path}.json`), JSON.stringify(indexes))
+  } catch (e) {
+    await mkdir(join(dir, path), { recursive: true })
+    await writeFile(join(dir, path, 'index.json'), JSON.stringify([{ id, [path.replace(/^\//, '')]: id }]))
+  }
+}
 
-  await events.add({ ...content, type: 'created' })
+export const post: RequestHandler = async ({ body, path }, res) => {
+  const id = uuid()
+  await writeFile(join(contentsDir, id), JSON.stringify(body))
+  await events.add({ ...body, type: 'created', id })
+  // addIndex
+  const index = { ...body, id }
+  try {
+    const before = await readFile(join(dir, path, 'index.json'), { encoding: 'utf-8' })
+    const indexes: Record<string, unknown>[] = JSON.parse(before)
+    indexes.push(index)
+    await writeFile(join(dir, path, 'index.json'), JSON.stringify(indexes))
+  } catch (e) {
+    await mkdir(join(dir, path), { recursive: true })
+    await writeFile(join(dir, path, 'index.json'), JSON.stringify([index]))
+  }
+
+  const key = path.replace(/^\//, '')
+  Object.entries(body)
+    .filter((e): e is [string, string] => typeof e[1] === 'string')
+    .map(async ([k, value]) => {
+      const data = { id: value, [key]: id }
+      try {
+        const before = await readFile(join(dir, k, 'index.json'), { encoding: 'utf-8' })
+        const indexes: Record<string, unknown>[] = JSON.parse(before)
+        const index = indexes.find((v) => v.id === value)
+        if (!index) indexes.push(data)
+        else {
+          const refs = index[key]
+          if (refs === id) return
+          if (!refs) index[key] = id
+          else if (!Array.isArray(refs)) index[key] = [refs, id]
+          else if (refs.includes(id)) return
+          else refs.push(id)
+        }
+        await writeFile(join(dir, k, 'index.json'), JSON.stringify(indexes))
+      } catch (e) {
+        await mkdir(join(dir, k), { recursive: true })
+        await writeFile(join(dir, k, 'index.json'), JSON.stringify([data]))
+      }
+    })
   res.status(201).json(id)
-})
+}
+generic.post('*', post)
+
+// store.on('updated', async (id, data) => {
+//   Object.entries(data).forEach(async ([k, v]) => {
+//     if (typeof v !== 'string') return
+//     try {
+//       const before = await readFile(join(dir, k, v), { encoding: 'utf-8' })
+//       const content = JSON.parse(before)
+//       console.log(k, v, content)
+//       if (content[k] && content[k] !== v) {
+//         if (Array.isArray(content[k])) content[k].push(v)
+//         else content[k] = [content[k], v]
+//       }
+//       const after = JSON.stringify(content)
+//       if (before === after) return
+//       await writeFile(join(dir, k, v), after)
+//     } catch {
+//       await mkdir(join(dir, k), { recursive: true })
+//       await writeFile(join(dir, k, v), JSON.stringify(ev))
+//     }
+//   })
+// })
+
 generic.delete('*', async ({ path }, res, next) => {
   try {
     const data = await readFile(join(dir, path), { encoding: 'utf-8' })
@@ -74,27 +154,6 @@ generic.get('*', async ({ path, query }, res, next) => {
     }
     next()
   }
-})
-
-events.on('created', async (ev) => {
-  Object.entries(ev).forEach(async ([k, v]) => {
-    if (typeof v !== 'string') return
-    try {
-      const before = await readFile(join(dir, k, v), { encoding: 'utf-8' })
-      const content = JSON.parse(before)
-      console.log(k, v, content)
-      if (content[k] && content[k] !== v) {
-        if (Array.isArray(content[k])) content[k].push(v)
-        else content[k] = [content[k], v]
-      }
-      const after = JSON.stringify(content)
-      if (before === after) return
-      await writeFile(join(dir, k, v), after)
-    } catch {
-      await mkdir(join(dir, k), { recursive: true })
-      await writeFile(join(dir, k, v), JSON.stringify(ev))
-    }
-  })
 })
 
 events.on('deleted', async (ev) => {
