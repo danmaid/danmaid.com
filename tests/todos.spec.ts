@@ -158,7 +158,7 @@ describe('データが永続化されていること', () => {
   })
 })
 
-describe('フィルタ', () => {
+describe.only('フィルタ', () => {
   const items: { status?: string }[] = [{}, { status: 'doing' }, { status: 'pause' }, { status: 'done' }]
   let ids: string[]
   beforeAll(async () => {

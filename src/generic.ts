@@ -20,7 +20,39 @@ generic.post('*', async ({ body, path }, res) => {
   res.status(201).json(id)
 })
 
-generic.get('/:key/:value', async ({ params: { key, value } }, res, next) => {
+const items = generic.route('/:key')
+
+items.get(async ({ params: { key }, query }, res, next) => {
+  try {
+    const items: any[] = await new Promise((resolve, reject) => {
+      const items: any[] = []
+      const rl = createInterface(createReadStream(index))
+      rl.on('error', reject)
+      rl.on('line', (line: string) => {
+        try {
+          const index = JSON.parse(line)
+          if (index[key]) items.push(index)
+        } catch {}
+      })
+      rl.on('close', () => resolve(items))
+    })
+    if (Object.keys(query).length > 0) {
+      const filtered = items.filter((item) => {
+        return Object.entries(query).every(([k, v]) => {
+          return typeof v === 'string' && v.startsWith('!') ? item[k] !== v.slice(1) : item[k] === v
+        })
+      })
+      if (filtered.length < 1) return res.sendStatus(404)
+      res.json(filtered.map((v) => ({ ...v, id: v[key] })))
+    } else res.json(items.map((v) => ({ ...v, id: v[key] })))
+  } catch {
+    res.json([])
+  }
+})
+
+const item = generic.route('/:key/:value')
+
+item.get(async ({ params: { key, value }, query }, res, next) => {
   try {
     const items: any[] = await new Promise((resolve, reject) => {
       const items: any[] = []
@@ -42,31 +74,11 @@ generic.get('/:key/:value', async ({ params: { key, value } }, res, next) => {
   }
 })
 
-generic.get('/:key', async ({ params: { key } }, res, next) => {
+item.delete(async ({ params: { key, value } }, res, next) => {
   try {
-    const items: any[] = await new Promise((resolve, reject) => {
-      const items: any[] = []
-      const rl = createInterface(createReadStream(index))
-      rl.on('error', reject)
-      rl.on('line', (line: string) => {
-        try {
-          const index = JSON.parse(line)
-          if (index[key]) items.push(index)
-        } catch {}
-      })
-      rl.on('close', () => resolve(items))
-    })
-    if (items.length < 1) return res.sendStatus(404)
-    res.json(items.map((v) => ({ ...v, id: v[key] })))
-  } catch {
-    next()
-  }
-})
-
-generic.delete('/:key/:value', async ({ params: { key, value } }, res, next) => {
-  try {
-    const items: any[] = await new Promise((resolve, reject) => {
-      const items: any[] = []
+    let deleted = 0
+    const items: string[] = await new Promise((resolve, reject) => {
+      const items: Set<string> = new Set()
       const rl = createInterface(createReadStream(index))
       rl.on('error', reject)
       rl.on('line', (line: string) => {
@@ -74,13 +86,17 @@ generic.delete('/:key/:value', async ({ params: { key, value } }, res, next) => 
           const index = JSON.parse(line)
           if (index[key] === value) {
             delete index[key]
-            if (Object.keys(index).length > 0) items.push(index)
-          } else items.push(index)
+            if (Object.keys(index).length > 0) {
+              items.add(JSON.stringify(index))
+              deleted++
+            }
+          } else items.add(line)
         } catch {}
       })
-      rl.on('close', () => resolve(items))
+      rl.on('close', () => resolve(Array.from(items)))
     })
-    await writeFile(index, items.map((v) => JSON.stringify(v)).join('\n') + '\n')
+    if (deleted === 0) return next()
+    await writeFile(index, items.join('\n') + '\n')
     await events.add({ type: 'deleted', [key]: value })
     res.sendStatus(200)
   } catch {
@@ -88,15 +104,29 @@ generic.delete('/:key/:value', async ({ params: { key, value } }, res, next) => 
   }
 })
 
-// generic.patch('*', async ({ body, path }, res, next) => {
-//   try {
-//     const data = await readFile(join(dir, path), { encoding: 'utf-8' })
-//     const content = JSON.parse(data)
-//     await writeFile(join(dir, path), JSON.stringify({ ...content, ...body }))
-//     const [_, k, v] = /^\/?(.*)\/([^/]+)$/.exec(path) || []
-//     await events.add({ ...body, type: 'updated', [k]: v })
-//     res.sendStatus(200)
-//   } catch {
-//     next()
-//   }
-// })
+item.patch(async ({ params: { key, value }, body }, res, next) => {
+  try {
+    let patched = 0
+    const items: string[] = await new Promise((resolve, reject) => {
+      const items: Set<string> = new Set()
+      const rl = createInterface(createReadStream(index))
+      rl.on('error', reject)
+      rl.on('line', (line: string) => {
+        try {
+          const index = JSON.parse(line)
+          if (index[key] === value) {
+            items.add(JSON.stringify({ ...index, ...body }))
+            patched++
+          } else items.add(line)
+        } catch {}
+      })
+      rl.on('close', () => resolve(Array.from(items)))
+    })
+    if (patched === 0) return next()
+    await writeFile(index, items.join('\n') + '\n')
+    await events.add({ ...body, type: 'updated', [key]: value })
+    res.sendStatus(200)
+  } catch {
+    next()
+  }
+})
