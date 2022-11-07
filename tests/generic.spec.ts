@@ -77,7 +77,7 @@ describe('todo', () => {
       : expect(test).toStrictEqual({ title: 'test', todo: id })
   })
 
-  it.skip('DELETE /todo/:id -> 200', async () => {
+  it('DELETE /todo/:id -> 200', async () => {
     const wait = waitEvent(({ event }) => typeof event.todo === 'string' && event.type === 'deleted')
     const res = await fetch(url + `/todo/${id}`, { method: 'DELETE' })
     expect(res.status).toBe(200)
@@ -87,14 +87,14 @@ describe('todo', () => {
     await expect(wait).resolves.toMatchObject({ event: { todo: id, type: 'deleted' } })
   })
 
-  it.skip('GET /title/test -> 200 { title: "test" }', async () => {
+  it('GET /title/test -> 200 { title: "test" }', async () => {
     const res = await fetch(url + `/title/test`)
     expect(res.status).toBe(200)
     expect(res.ok).toBe(true)
     await expect(res.json()).resolves.toStrictEqual({ title: 'test' })
   })
 
-  it.skip('DELETE /title/test -> 200', async () => {
+  it('DELETE /title/test -> 200', async () => {
     const res = await fetch(url + `/title/test`, { method: 'DELETE' })
     expect(res.status).toBe(200)
     expect(res.ok).toBe(true)
