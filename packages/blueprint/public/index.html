@@ -32,7 +32,7 @@
       cons.src = matrix.src = src
 
       const old = cons.onmessage
-      cons.onmessage = async (ev) => {
+      cons.onmessage = (ev) => {
         const { data } = ev
         const { date, event: receipt } = JSON.parse(data)
         if (typeof receipt.receipt === 'string') {
@@ -46,8 +46,8 @@
           img.src = `/receipts/${id}`
           img.style.maxHeight = 'inherit'
           div.append(img)
-          cons.prepend(div)
-        } else old(ev)
+          return div
+        } else return old(ev)
       }
     </script>
   </body>

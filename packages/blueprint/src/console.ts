@@ -15,12 +15,12 @@ class DmConsole extends HTMLElement {
     const root = this.attachShadow({ mode: 'open' })
     root.innerHTML = `
       <div style="display: flex; flex-direction: column; height: 100%">
-        <div id="out" style="flex: 1 0; background-color: #00f3; display: flex; flex-direction: column-reverse; overflow: auto; word-break: break-all"><slot name="output"></slot></div>
+        <div id="out" style="flex: 1 0; background-color: #00f3; display: flex; flex-direction: column-reverse; overflow: auto; word-break: break-all"></div>
         <div style="flex: 0 0; background-color: #0f03"><slot name="input"></slot></div>
       </div>
     `
     const out = root.getElementById('out')
-    if (!out) throw Error('')
+    if (!out) throw Error('out element not found.')
     this.out = out
   }
 
@@ -35,11 +35,14 @@ class DmConsole extends HTMLElement {
     if (this.src === this.created) this.src?.close()
   }
 
-  #onmessage = (ev: MessageEvent) => this.onmessage(ev)
-  onmessage = (ev: MessageEvent) => {
+  #onmessage = async (ev: MessageEvent) => {
+    const elem = await this.onmessage(ev)
+    if (elem) this.out.prepend(elem)
+  }
+  onmessage = async (ev: MessageEvent): Promise<HTMLElement | void> => {
     const div = document.createElement('div')
     div.textContent = ev.data
-    this.out.prepend(div)
+    return div
   }
 
   clear() {
