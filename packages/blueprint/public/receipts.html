@@ -3,22 +3,81 @@
   <head>
     <title>Input Receipt</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="upload-receipt-button.js"></script>
+    <style>
+      :root {
+        background-color: #000;
+        color: #eee;
+      }
+    </style>
   </head>
   <body>
     <div>
-      <label for="original">レシート/領収書原本</label>
-      <input type="file" id="original" accept="image/*,.pdf" multiple />
+      <button onclick="load()">refresh</button>
+      <dm-upload-receipt-button></dm-upload-receipt-button>
     </div>
 
+    <div id="thumbnails" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px"></div>
+
+    <template id="tmpl">
+      <style>
+        :host {
+          position: relative;
+        }
+        span {
+          position: absolute;
+          background-color: '#0005';
+          color: '#fff';
+          white-space: 'break-all';
+          bottom: 0;
+        }
+        img {
+          width: 100%;
+        }
+      </style>
+    </template>
+
     <script>
-      function upload(ev) {
-        for (const file of ev.target.files) {
-          fetch('/receipts', { method: 'POST', body: file })
+      customElements.define(
+        'dm-thumbnail',
+        class extends HTMLElement {
+          root
+          text
+          img
+          constructor() {
+            super()
+            const root = this.attachShadow({ mode: 'open' })
+            const text = document.createElement('span')
+            const img = document.createElement('img')
+            root.append(text)
+            root.append(img)
+            this.text = text
+            this.img = img
+            this.root = root
+          }
+
+          connectedCallback() {
+            if (!this.isConnected) return
+            this.img.src = this.getAttribute('src')
+            this.text.textContent = this.getAttribute('data-text')
+            this.root.append(tmpl.content.cloneNode(true))
+          }
+        }
+      )
+
+      async function load() {
+        thumbnails.innerHTML = ''
+        const res = await fetch('/receipts')
+        const data = await res.json()
+        for (const item of data) {
+          const thumbnail = document.createElement('dm-thumbnail')
+          thumbnail.setAttribute('src', `/receipts/${item.id}`)
+          thumbnail.setAttribute('data-text', JSON.stringify(item))
+          thumbnails.append(thumbnail)
         }
       }
 
-      const original = document.getElementById('original')
-      original.addEventListener('change', upload)
+      onload = () => load()
     </script>
   </body>
 </html>
