@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="matrix-code.js"></script>
     <script src="console.js"></script>
+    <script src="upload-receipt-button.js"></script>
     <style>
       :root {
         background-color: #000;
@@ -13,7 +14,12 @@
     </style>
   </head>
   <body style="height: 100vh; margin: 0; padding: 8px; box-sizing: border-box">
-    <dm-console id="console" style="height: 100%"></dm-console>
+    <dm-console id="console" style="height: 100%">
+      <div slot="input" style="display: flex">
+        <span style="flex: 1 1"></span>
+        <dm-upload-receipt-button></dm-upload-receipt-button>
+      </div>
+    </dm-console>
     <dm-matrix-code
       id="matrix"
       style="position: fixed; top: 0; left: 0; bottom: 0; right: 0; z-index: -999"
@@ -21,9 +27,28 @@
 
     <script>
       const src = new EventSource('/')
-      const console = document.getElementById('console')
+      const cons = document.getElementById('console')
       const matrix = document.getElementById('matrix')
-      console.src = matrix.src = src
+      cons.src = matrix.src = src
+
+      const old = cons.onmessage
+      cons.onmessage = async (ev) => {
+        const { data } = ev
+        const { date, event: receipt } = JSON.parse(data)
+        if (typeof receipt.receipt === 'string') {
+          const { receipt: id } = receipt
+          const div = document.createElement('div')
+          div.slot = 'output'
+          div.textContent = `${new Date(date).toLocaleString()} レシート/領収書`
+          div.style.color = '#aff'
+          div.style.maxHeight = '200px'
+          const img = document.createElement('img')
+          img.src = `/receipts/${id}`
+          img.style.maxHeight = 'inherit'
+          div.append(img)
+          cons.prepend(div)
+        } else old(ev)
+      }
     </script>
   </body>
 </html>

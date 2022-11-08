@@ -7,7 +7,7 @@ class DmConsole extends HTMLElement {
   }
   set src(v: EventSource | undefined) {
     this.#src = v
-    if (v) v.addEventListener('message', this.onmessage)
+    if (v) v.addEventListener('message', this.#onmessage)
   }
 
   constructor() {
@@ -15,8 +15,8 @@ class DmConsole extends HTMLElement {
     const root = this.attachShadow({ mode: 'open' })
     root.innerHTML = `
       <div style="display: flex; flex-direction: column; height: 100%">
-        <div id="out" style="flex: 1 0; background-color: #00f3; display: flex; flex-direction: column-reverse; overflow: auto; word-break: break-all"></div>
-        <div style="flex: 0 0; background-color: #0f03"></div>
+        <div id="out" style="flex: 1 0; background-color: #00f3; display: flex; flex-direction: column-reverse; overflow: auto; word-break: break-all"><slot name="output"></slot></div>
+        <div style="flex: 0 0; background-color: #0f03"><slot name="input"></slot></div>
       </div>
     `
     const out = root.getElementById('out')
@@ -31,10 +31,11 @@ class DmConsole extends HTMLElement {
   }
 
   disconnectedCallback() {
-    if (this.src) this.src.removeEventListener('message', this.onmessage)
+    if (this.src) this.src.removeEventListener('message', this.#onmessage)
     if (this.src === this.created) this.src?.close()
   }
 
+  #onmessage = (ev: MessageEvent) => this.onmessage(ev)
   onmessage = (ev: MessageEvent) => {
     const div = document.createElement('div')
     div.textContent = ev.data
