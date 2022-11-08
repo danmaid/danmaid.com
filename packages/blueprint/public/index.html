@@ -17,6 +17,8 @@
     <dm-console id="console" style="height: 100%">
       <div slot="input" style="display: flex">
         <span style="flex: 1 1"></span>
+        <button onclick="startCamera()">start camera</button>
+        <button onclick="stopCamera()">stop camera</button>
         <dm-upload-receipt-button></dm-upload-receipt-button>
       </div>
     </dm-console>
@@ -48,6 +50,25 @@
           div.append(img)
           return div
         } else return old(ev)
+      }
+
+      function startCamera() {
+        fetch('/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'start',
+            camera: 'labo1',
+            url: 'rtmp://a.rtmp.youtube.com/live2/8bgh-fhbb-dt08-cf9b-3hyd',
+          }),
+        })
+      }
+      function stopCamera() {
+        fetch('/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'stop', camera: 'labo1' }),
+        })
       }
     </script>
   </body>
