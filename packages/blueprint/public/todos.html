@@ -4,9 +4,19 @@
     <title>Todo List</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="stub.js"></script>
+    <script src="dm-data-table.js"></script>
   </head>
 
   <body>
+    <dm-data-table src="/todos">
+      <div slot="row" id="hoge">hoge</div>
+    </dm-data-table>
+
+    <script>
+      const hoge = document.getElementById('hoge')
+      setTimeout(() => console.log(hoge.assignedSlot), 1000)
+    </script>
+
     <div>
       <button onclick="load()">refresh</button>
       <button onclick="attachEvents()">events</button>

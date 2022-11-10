@@ -3,42 +3,147 @@
   <head>
     <title>index</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="matrix-code.js"></script>
     <style>
       :root {
         background-color: #000;
         color: #eee;
       }
     </style>
+    <script>
+      let url
+      const items = []
+    </script>
   </head>
   <body style="height: 100vh; margin: 0; padding: 8px; box-sizing: border-box">
-    <div style="display: flex; flex-direction: column; height: 100%">
-      <aside onchange="tabChange()">
-        <label><input type="radio" name="tab" value="console" checked />console</label>
-        <label><input type="radio" name="tab" value="todos" />todos</label>
-        <label><input type="radio" name="tab" value="receipts" />receipts</label>
-      </aside>
-      <main style="flex: 1 1">
-        <iframe id="frame" src="console.html" style="width: 100%; height: 100%; border: none"></iframe>
-      </main>
+    <script src="dm-data-source.js"></script>
+    <dm-data-source id="ds" src="/"></dm-data-source>
+
+    <div style="display: flex; height: 100%">
+      <nav style="flex-basis: 200px">
+        <style>
+          .nav-list {
+            list-style: none;
+            padding-left: 0;
+          }
+          .nav-list > [selected] {
+            background-color: #00f3;
+          }
+        </style>
+        <ul id="nav-list" class="nav-list">
+          <li value="/" selected>/</li>
+          <li value="/todos">/todos</li>
+          <li value="/receipts">/receipts</li>
+        </ul>
+      </nav>
+      <script>
+        const ds = document.getElementById('ds')
+        const list = document.getElementById('nav-list')
+        const listItems = list.querySelectorAll('[value]')
+        listItems.forEach((v) =>
+          v.addEventListener('click', ({ target: item }) => {
+            url = item.getAttribute('value')
+            console.log('selected', url)
+            listItems.forEach((v) => v.removeAttribute('selected'))
+            item.toggleAttribute('selected', true)
+            ds.setAttribute('src', item.getAttribute('value'))
+          })
+        )
+      </script>
+
+      <div style="flex: 1 1; display: flex; flex-direction: column; height: 100%">
+        <header onchange="viewChange()">
+          <label><input type="radio" name="tab" value="console" checked />console</label>
+          <label><input type="radio" name="tab" value="todos" />todos</label>
+          <label><input type="radio" name="tab" value="receipts" />receipts</label>
+          <label><input type="radio" name="tab" value="table" />table</label>
+        </header>
+
+        <script>
+          async function viewChange() {
+            const tabs = document.getElementsByName('tab')
+            const tab = Array.from(tabs).find((v) => v.checked)
+            tabs.forEach((v) => {
+              const m = document.getElementById(v.value)
+              if (m?.style) m.style.display = 'none'
+            })
+            const s = document.getElementById(tab.value)
+            if (s?.style) s.style.display = 'block'
+          }
+        </script>
+
+        <main style="flex: 1 1">
+          <dm-console id="console" style="height: 100%">
+            <div slot="output">hoge</div>
+            <div slot="input" style="display: flex">
+              <span style="flex: 1 1"></span>
+              <button onclick="startCamera()">start camera</button>
+              <button onclick="stopCamera()">stop camera</button>
+              <dm-upload-receipt-button></dm-upload-receipt-button>
+            </div>
+          </dm-console>
+          <script src="dm-console.js"></script>
+          <script src="upload-receipt-button.js"></script>
+          <script>
+            const cons = document.getElementById('console')
+            ds.addEventListener('event', (ev) => {
+              console.log('onds', ev)
+              cons.dispatchEvent(new MessageEvent('output', { data: ev.data }))
+            })
+            // const old = cons.onmessage
+            // cons.onmessage = (ev) => {
+            //   const { data } = ev
+            //   const { date, event: receipt } = JSON.parse(data)
+            //   if (typeof receipt.receipt === 'string') {
+            //     const { receipt: id } = receipt
+            //     const div = document.createElement('div')
+            //     div.slot = 'output'
+            //     div.textContent = `${new Date(date).toLocaleString()} レシート/領収書`
+            //     div.style.color = '#aff'
+            //     div.style.maxHeight = '200px'
+            //     const img = document.createElement('img')
+            //     img.src = `/receipts/${id}`
+            //     img.style.maxHeight = 'inherit'
+            //     div.append(img)
+            //     return div
+            //   } else return old(ev)
+            // }
+
+            function startCamera() {
+              fetch('/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'start',
+                  camera: 'labo1',
+                  url: 'rtmp://a.rtmp.youtube.com/live2/8bgh-fhbb-dt08-cf9b-3hyd',
+                }),
+              })
+            }
+            function stopCamera() {
+              fetch('/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'stop', camera: 'labo1' }),
+              })
+            }
+          </script>
+
+          <table id="table" style="display: none">
+            <thead></thead>
+            <tbody>
+              <tr>
+                <td>xx</td>
+              </tr>
+            </tbody>
+          </table>
+        </main>
+      </div>
     </div>
+
+    <script src="matrix-code.js"></script>
     <dm-matrix-code
       src="/"
       style="position: fixed; top: 0; left: 0; bottom: 0; right: 0; z-index: -999"
     ></dm-matrix-code>
-
-    <script>
-      async function tabChange() {
-        const tabs = document.getElementsByName('tab')
-        const tab = Array.from(tabs).find((v) => v.checked)
-        const frame = document.getElementById('frame')
-        frame.src = `${tab.value}.html`
-        frame.onload = () => {
-          const root = frame.contentDocument.documentElement
-          root.style.backgroundColor = 'transparent'
-          root.style.color = '#eee'
-        }
-      }
-    </script>
   </body>
 </html>
