@@ -2,41 +2,58 @@ import { mkdirSync } from 'node:fs'
 import { EventEmitter } from 'node:events'
 import { v4 as uuid } from 'uuid'
 import { join } from 'node:path'
-import { appendFile } from 'node:fs/promises'
+import { appendFile, writeFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { createInterface } from 'node:readline'
+import { Readable } from 'node:stream'
 
-export type EventListener<T = any> = (event: { id: string; date: Date; event: T }) => void
+export type EventListener<T = any> = (event: { id: string; date: Date; event: T; content?: boolean }) => void
 
 export interface EventStore<T = any> {
   on(eventName: 'added', listener: EventListener<T>): this
   on(eventName: string | symbol, listener: (...args: any[]) => void): this
 
-  once(eventName: 'added', listener: (event: { id: string; date: Date; event: T }) => void): this
+  once(eventName: 'added', listener: EventListener<T>): this
   once(eventName: string | symbol, listener: (...args: any[]) => void): this
 }
 
-export class EventStore<T = any> extends EventEmitter {
+export class EventStore<T extends Record<string, unknown> = any> extends EventEmitter {
   dir = './data/events'
-  file = join(this.dir, 'index.jsonl')
+  index = join(this.dir, 'index.jsonl')
 
   constructor() {
     super()
     mkdirSync(this.dir, { recursive: true })
   }
 
-  async add(event: T): Promise<string> {
+  async add(event: T, content?: Readable): Promise<{ id: string; date: Date; event: T; content?: boolean }> {
     const id = uuid()
-    const e = { id, date: new Date(), event }
-    await appendFile(this.file, JSON.stringify(e) + '\n')
+    const e: Awaited<ReturnType<typeof this.add>> = { id, date: new Date(), event }
+    if (content instanceof Readable) {
+      e.content = true
+      await writeFile(join(this.dir, id), content)
+    }
+    await appendFile(this.index, JSON.stringify(e) + '\n')
     this.emit('added', e)
-    return id
+    return e
+  }
+
+  async find(finder: (v: T) => boolean): Promise<T> {
+    return await new Promise((resolve, reject) => {
+      const reader = createInterface(createReadStream(this.index))
+      reader.on('line', (line) => {
+        const event = JSON.parse(line)
+        if (finder(event)) resolve(event)
+      })
+      reader.on('error', reject)
+      reader.on('close', reject)
+    })
   }
 
   async filter(filter: (v: T & { id: string }) => boolean): Promise<(T & { id: string })[]> {
     return await new Promise((resolve, reject) => {
       const events: (T & { id: string })[] = []
-      const reader = createInterface(createReadStream(this.file))
+      const reader = createInterface(createReadStream(this.index))
       reader.on('line', (line) => {
         const event = JSON.parse(line)
         if (filter(event)) events.push(event)

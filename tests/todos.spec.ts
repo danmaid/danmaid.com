@@ -158,7 +158,7 @@ describe('データが永続化されていること', () => {
   })
 })
 
-describe('フィルタ', () => {
+describe.only('フィルタ', () => {
   const items: { status?: string }[] = [{}, { status: 'doing' }, { status: 'pause' }, { status: 'done' }]
   let ids: string[]
   beforeAll(async () => {
@@ -178,6 +178,7 @@ describe('フィルタ', () => {
 
   it('GET /todos', async () => {
     const res = await fetch(url + '/todos', { headers: { accept: 'application/json' } })
+    expect(res.status).toBe(200)
     expect(res.ok).toBe(true)
     const data = await res.json()
     expect(data).toHaveLength(4)

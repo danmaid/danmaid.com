@@ -1,12 +1,47 @@
 import fetch from 'node-fetch'
 import { Server } from '../src'
 import { getUrl, startServer } from './utils'
+import EventSource from 'eventsource'
 
 const server = new Server()
 startServer(server)
 
 let url: string
 beforeAll(async () => (url = getUrl(server.address())))
+
+describe.only('', () => {
+  const events: MessageEvent[] = []
+  let src: EventSource
+
+  beforeAll(async () => {
+    src = new EventSource(url)
+    src.onmessage = ({ data }) => events.push(JSON.parse(data))
+    await new Promise((r) => (src.onopen = r))
+  })
+  afterAll(async () => {
+    src.close()
+  })
+
+  it('', async () => {
+    const body = JSON.stringify({ title: 'test' })
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    })
+    const id = res.headers.get('Event-ID')
+    expect(id).toMatch(/^[\w-]+$/)
+    const date = res.headers.get('Event-Date')
+    expect(new Date('invalid').getTime()).toBeFalsy()
+    expect(new Date(date || 'invalid').getTime()).toBeTruthy()
+    const event = expect.objectContaining({
+      path: '/',
+      'content-type': 'application/json',
+      'content-length': `${body.length}`,
+    })
+    expect(events).toContainEqual({ id, date, event, content: true })
+  })
+})
 
 describe('保持しているイベントが大量でも問題なく動作できること', () => {
   it('大量イベント準備', async () => {
