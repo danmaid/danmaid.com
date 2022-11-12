@@ -11,6 +11,8 @@ import { createReadStream } from 'node:fs'
 
 const dir = './data'
 
+export const sequencer = new Map<string, Promise<any>>()
+
 export class Server extends http.Server {
   constructor(public app = express()) {
     super(app)
@@ -40,11 +42,14 @@ export class Server extends http.Server {
         })
 
         const index = join(dir, path, 'index.json')
-        const text = await readFile(index, 'utf-8').catch(() => '[]')
-        const indexes: unknown[] = JSON.parse(text)
-        indexes.push({ ...event, ...data, id })
-        await writeFile(index, JSON.stringify(indexes), 'utf-8')
-
+        const addIndex = (sequencer.get(index) || Promise.resolve()).then(async () => {
+          const text = await readFile(index, 'utf-8').catch(() => '[]')
+          const indexes: unknown[] = JSON.parse(text)
+          indexes.push({ ...event, ...data, id })
+          await writeFile(index, JSON.stringify(indexes), 'utf-8')
+        })
+        sequencer.set(index, addIndex)
+        await addIndex
         events.add({ ...event, ...data, id, type: 'created' })
         res.status(201).json(id)
       } catch {
@@ -58,10 +63,11 @@ export class Server extends http.Server {
         const index = indexes.find((v) => v.id === id)
         if (!index) return next()
 
-        res.set({ 'content-type': index['content-type'], 'content-length': index['content-length'] })
+        res.set({ 'content-type': index['content-type'] })
         const reader = createReadStream(join(dir, path))
         reader.on('error', () => next())
         reader.pipe(res)
+        await new Promise((r) => reader.on('end', r))
       } catch {
         next()
       }
@@ -70,18 +76,17 @@ export class Server extends http.Server {
       try {
         const text = await readFile(join(dir, path, 'index.json'), 'utf-8')
         const data: Record<string, unknown>[] = JSON.parse(text)
-        // if (Object.keys(query).length > 0) {
-        //   const filtered = data.filter((item) => {
-        //     return Object.entries(query).every(([k, v]) => {
-        //       return typeof v === 'string' && v.startsWith('!') ? item[k] !== v.slice(1) : item[k] === v
-        //     })
-        //   })
-        //   res.json(filtered)
-        // } else {
+        if (Object.keys(query).length > 0) {
+          const filtered = data.filter((item) => {
+            return Object.entries(query).every(([k, v]) => {
+              return typeof v === 'string' && v.startsWith('!') ? item[k] !== v.slice(1) : item[k] === v
+            })
+          })
+          res.json(filtered)
+        } else {
           res.json(data)
-        // }
-      } catch (e) {
-        console.error(e)
+        }
+      } catch {
         next()
       }
     })
@@ -90,13 +95,17 @@ export class Server extends http.Server {
         const { event } = res.locals.event
         await rm(join(dir, path))
         const index = join(dir, parent, 'index.json')
-        const text = await readFile(index, 'utf-8')
-        const indexes: { id: string; 'content-type'?: string; 'content-length'?: string }[] = JSON.parse(text)
-        const i = indexes.findIndex((v) => v.id === id)
-        if (i >= 0) {
-          indexes.splice(i, 1)
-          await writeFile(index, JSON.stringify(indexes), 'utf-8')
-        }
+        const deleteIndex = (sequencer.get(index) || Promise.resolve()).then(async () => {
+          const text = await readFile(index, 'utf-8')
+          const indexes: { id: string; 'content-type'?: string; 'content-length'?: string }[] = JSON.parse(text)
+          const i = indexes.findIndex((v) => v.id === id)
+          if (i >= 0) {
+            indexes.splice(i, 1)
+            await writeFile(index, JSON.stringify(indexes), 'utf-8')
+          }
+        })
+        sequencer.set(index, deleteIndex)
+        await deleteIndex
         events.add({ ...event, id, type: 'deleted' })
         res.sendStatus(200)
       } catch {
@@ -113,12 +122,15 @@ export class Server extends http.Server {
         await writeFile(join(dir, path), JSON.stringify(data), 'utf-8')
 
         const index = join(dir, parent, 'index.json')
-        const indexes: { id: string }[] = JSON.parse(await readFile(index, 'utf-8'))
-        const i = indexes.findIndex((v) => v.id === id)
-        if (i >= 0) indexes.splice(i, 1)
-        indexes.push({ ...event })
-        await writeFile(index, JSON.stringify(indexes), 'utf-8')
-
+        const updateIndex = (sequencer.get(index) || Promise.resolve()).then(async () => {
+          const indexes: { id: string }[] = JSON.parse(await readFile(index, 'utf-8'))
+          const i = indexes.findIndex((v) => v.id === id)
+          if (i >= 0) indexes.splice(i, 1)
+          indexes.push({ ...event, ...data, id })
+          await writeFile(index, JSON.stringify(indexes), 'utf-8')
+        })
+        sequencer.set(index, updateIndex)
+        await updateIndex
         events.add({ ...event, ...data, id, type: 'updated' })
         res.sendStatus(200)
       } catch (e) {

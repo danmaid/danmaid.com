@@ -158,7 +158,7 @@ describe('データが永続化されていること', () => {
   })
 })
 
-describe.only('フィルタ', () => {
+describe('フィルタ', () => {
   const items: { status?: string }[] = [{}, { status: 'doing' }, { status: 'pause' }, { status: 'done' }]
   let ids: string[]
   beforeAll(async () => {
@@ -166,7 +166,7 @@ describe.only('フィルタ', () => {
       const res = await fetch(url + '/todos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(v),
+        body: JSON.stringify({ ...v, key: 'filter' }),
       })
       return await res.json()
     }
@@ -177,7 +177,7 @@ describe.only('フィルタ', () => {
   })
 
   it('GET /todos', async () => {
-    const res = await fetch(url + '/todos', { headers: { accept: 'application/json' } })
+    const res = await fetch(url + '/todos?key=filter', { headers: { accept: 'application/json' } })
     expect(res.status).toBe(200)
     expect(res.ok).toBe(true)
     const data = await res.json()
@@ -185,14 +185,14 @@ describe.only('フィルタ', () => {
   })
 
   it('GET /todos?status=!done', async () => {
-    const res = await fetch(url + '/todos?status=!done', { headers: { accept: 'application/json' } })
+    const res = await fetch(url + '/todos?status=!done&key=filter', { headers: { accept: 'application/json' } })
     expect(res.ok).toBe(true)
     const data = await res.json()
     expect(data).toHaveLength(3)
   })
 
   it('GET /todos?status=doing', async () => {
-    const res = await fetch(url + '/todos?status=doing', { headers: { accept: 'application/json' } })
+    const res = await fetch(url + '/todos?status=doing&key=filter', { headers: { accept: 'application/json' } })
     expect(res.ok).toBe(true)
     const data = await res.json()
     expect(data).toHaveLength(1)
@@ -217,7 +217,7 @@ describe('コメント', () => {
 
   it('POST /todos/:id/comments', async () => {
     const res = await fetch(url + `/todos/${id}/comments`, { method: 'POST', body: 'comment' })
-    expect(res.status).toBe(201)
+    expect(res.status).toBe(200)
     expect(res.ok).toBe(true)
   })
 
@@ -267,10 +267,10 @@ describe('イベント', () => {
     expect(res.ok).toBe(true)
     const data: Record<string, unknown>[] = await res.json()
     expect(data).toStrictEqual([
-      expect.objectContaining({ todo: id, type: 'created', title: 'test' }),
-      expect.objectContaining({ todo: id, type: 'updated', status: 'doing' }),
-      expect.objectContaining({ todo: id, type: 'created', message: 'comment' }),
-      expect.objectContaining({ todo: id, type: 'deleted' }),
+      expect.objectContaining({ path: expect.stringMatching(/^\/todos/), id, type: 'created', title: 'test' }),
+      expect.objectContaining({ path: expect.stringMatching(/^\/todos/), id, type: 'updated', status: 'doing' }),
+      expect.objectContaining({ path: expect.stringMatching(/^\/todos/), id, type: 'updated', comments: ['comment'] }),
+      expect.objectContaining({ path: expect.stringMatching(/^\/todos/), id, type: 'deleted' }),
     ])
   })
 })
