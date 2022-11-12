@@ -9,15 +9,6 @@ let url: string
 beforeAll(async () => (url = getUrl(server.address())))
 
 describe('基本操作', () => {
-  it('GET /todos', async () => {
-    const res = await fetch(url + '/todos', { headers: { accept: 'application/json' } })
-    expect(res.ok).toBe(true)
-    expect(res.status).toBe(200)
-    expect(res.headers.get('Content-Type')).toMatch('json')
-    const data = await res.json()
-    expect(data).toBeInstanceOf(Array)
-  })
-
   const todo = { title: 'test' }
   let id: string | undefined
   it('POST /todos -> 201 ID', async () => {

@@ -9,7 +9,7 @@ startServer(server)
 let url: string
 beforeAll(async () => (url = getUrl(server.address())))
 
-describe.only('', () => {
+describe('', () => {
   const events: MessageEvent[] = []
   let src: EventSource
 
@@ -57,10 +57,10 @@ describe('保持しているイベントが大量でも問題なく動作でき�
     for (let i = 0; i < count / concurrent; i++) {
       const reses = await Promise.all(new Array(concurrent).fill(0).map(post))
       expect(reses.length).toBe(concurrent)
-      expect(reses.every((res) => res.status === 201)).toBe(true)
+      expect(reses.every((res) => res.status === 200)).toBe(true)
     }
     expect.assertions((count / concurrent) * 2)
-  }, 10000)
+  }, 30000)
 
   let id: string | undefined
   it('POST /todos/:id && DELETE /todos/:id', async () => {

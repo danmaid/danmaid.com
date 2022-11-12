@@ -30,8 +30,7 @@ sensors.post('/sensors/:id/events', async ({ params: { id } }, res, next) => {
     await updateIndex
     events.add({ ...event, ...data, id, type: 'updated' })
     res.sendStatus(200)
-  } catch (e) {
-    console.error(e)
+  } catch {
     next()
   }
 })

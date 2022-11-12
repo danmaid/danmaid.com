@@ -4,7 +4,6 @@ import { todos } from './todos'
 import { sensors } from './sensors'
 import { sse } from './sse'
 import { events } from './events'
-import { receipts } from './receipts'
 import { mkdir, readFile, writeFile, copyFile, rm } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { createReadStream } from 'node:fs'
@@ -141,6 +140,5 @@ export class Server extends http.Server {
         next()
       }
     })
-    app.use(receipts)
   }
 }
