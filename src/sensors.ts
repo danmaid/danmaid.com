@@ -1,60 +1,37 @@
-import { Router, json } from 'express'
-import { readdir, readFile, writeFile } from 'node:fs/promises'
+import { Router } from 'express'
+import { readFile, writeFile } from 'node:fs/promises'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { events as eventStore } from './events'
+import { events } from './events'
+import { sequencer } from '.'
 
 export const sensors = Router()
 
 const dir = './data/sensors'
 mkdirSync(dir, { recursive: true })
 
-sensors.use(json())
+sensors.post('/sensors/:id/events', async ({ params: { id } }, res, next) => {
+  try {
+    const { id: eventId, event } = res.locals.event
+    const before = JSON.parse(await readFile(join(dir, id), 'utf-8').catch(() => '{}'))
+    const patch = JSON.parse(await readFile(join(events.dir, eventId), 'utf-8'))
+    const data = { ...before, ...patch }
+    await writeFile(join(dir, id), JSON.stringify(data), 'utf-8')
 
-const items = sensors.route('/sensors')
-
-items.get(async ({ query }, res, next) => {
-  const files = await readdir(dir)
-  const items = files.map(async (file) => {
-    const text = await readFile(join(dir, file), { encoding: 'utf-8' })
-    const data = JSON.parse(text)
-    return { ...data, id: file }
-  })
-  const data = await Promise.all(items)
-  if (Object.keys(query).length > 0) {
-    const filtered = data.filter((item) => {
-      return Object.entries(query).every(([k, v]) => {
-        return typeof v === 'string' && v.startsWith('!') ? item[k] !== v.slice(1) : item[k] === v
-      })
+    const index = join(dir, 'index.json')
+    const updateIndex = (sequencer.get(index) || Promise.resolve()).then(async () => {
+      const indexes: { id: string }[] = JSON.parse(await readFile(index, 'utf-8').catch(() => '[]'))
+      const i = indexes.findIndex((v) => v.id === id)
+      if (i >= 0) indexes.splice(i, 1)
+      indexes.push({ ...event, ...data, id })
+      await writeFile(index, JSON.stringify(indexes), 'utf-8')
     })
-    res.json(filtered)
-  } else res.json(data)
-})
-
-const item = sensors.route('/sensors/:id')
-
-item.get(async ({ params: { id } }, res, next) => {
-  try {
-    const text = await readFile(join(dir, id), { encoding: 'utf-8' })
-    const data = JSON.parse(text)
-    res.json({ ...data, id })
-  } catch {
-    res.sendStatus(404)
-  }
-})
-
-const events = sensors.route('/sensors/:id/events')
-
-events.post(async ({ params: { id }, body }, res, next) => {
-  const eventId = await eventStore.add({ ...body, date: new Date(), sensor: id })
-  try {
-    const text = await readFile(join(dir, id), { encoding: 'utf-8' })
-    const sensor = JSON.parse(text)
-
-    await writeFile(join(dir, id), JSON.stringify({ ...sensor, ...body, event: eventId }))
-    res.sendStatus(201)
-  } catch {
-    await writeFile(join(dir, id), JSON.stringify({ ...body, event: eventId }))
-    res.sendStatus(201)
+    sequencer.set(index, updateIndex)
+    await updateIndex
+    events.add({ ...event, ...data, id, type: 'updated' })
+    res.sendStatus(200)
+  } catch (e) {
+    console.error(e)
+    next()
   }
 })

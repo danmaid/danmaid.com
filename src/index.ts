@@ -28,11 +28,14 @@ export class Server extends http.Server {
       res.locals.event = ev
       next()
     })
+    app.use(sse)
+    app.use(todos)
+    app.use(sensors)
     app.post('*', async ({ path, headers }, res, next) => {
       try {
-        const { id, content, event } = res.locals.event
+        const { id, event } = res.locals.event
         await mkdir(dirname(join(dir, path)), { recursive: true })
-        if (content) await copyFile(join(events.dir, id), join(dir, path, id))
+        await copyFile(join(events.dir, id), join(dir, path, id))
 
         const data: Record<string, unknown> = await new Promise((resolve) => {
           if (headers['content-type'] !== 'application/json') resolve({})
@@ -123,7 +126,7 @@ export class Server extends http.Server {
 
         const index = join(dir, parent, 'index.json')
         const updateIndex = (sequencer.get(index) || Promise.resolve()).then(async () => {
-          const indexes: { id: string }[] = JSON.parse(await readFile(index, 'utf-8'))
+          const indexes: { id: string }[] = JSON.parse(await readFile(index, 'utf-8').catch(() => '[]'))
           const i = indexes.findIndex((v) => v.id === id)
           if (i >= 0) indexes.splice(i, 1)
           indexes.push({ ...event, ...data, id })
@@ -138,9 +141,6 @@ export class Server extends http.Server {
         next()
       }
     })
-    app.use(sse)
-    app.use(todos)
-    app.use(sensors)
     app.use(receipts)
   }
 }

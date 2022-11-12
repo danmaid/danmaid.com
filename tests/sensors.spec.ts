@@ -19,7 +19,7 @@ it('GET /sensors', async () => {
 
 const sensor = '810A0000'
 const event = { type: 'sensed', temperature: 25.6, humidity: 41.46, magnet: 'open' }
-it('POST /sensors/:id/events -> 201', async () => {
+it('POST /sensors/:id/events -> 200', async () => {
   const res = await fetch(url + `/sensors/${sensor}/events`, {
     method: 'POST',
     headers: {
@@ -28,7 +28,7 @@ it('POST /sensors/:id/events -> 201', async () => {
     },
     body: JSON.stringify(event),
   })
-  expect(res.status).toBe(201)
+  expect(res.status).toBe(200)
   expect(res.ok).toBe(true)
 })
 
@@ -38,7 +38,7 @@ it('GET /sensors/:id -> 200 sensor', async () => {
   expect(res.ok).toBe(true)
   expect(res.headers.get('Content-Type')).toMatch('json')
   const data = await res.json()
-  expect(data).toMatchObject({ id: sensor })
+  expect(data).toMatchObject(event)
 })
 
 it('GET /sensors -> 200 contain({id})', async () => {
