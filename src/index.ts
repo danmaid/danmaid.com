@@ -18,7 +18,8 @@ export class Server extends http.Server {
     super(app)
     app.use(async (req, res, next) => {
       const { method, path, headers } = req
-      const event = await events.add({ ...headers, method, path }, req)
+      const hasContent = parseInt(headers['content-length'] || '')
+      const event = await events.add({ ...headers, method, path }, hasContent ? req : undefined)
       res.setHeader('Event-ID', event.id)
       res.setHeader('Event-Date', event.date.toISOString())
       res.locals.event = event
