@@ -4,9 +4,11 @@ import { todos } from './todos'
 import { sensors } from './sensors'
 import { sse } from './sse'
 import { events } from './events'
-import { mkdir, readFile, writeFile, copyFile, rm } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createReadStream } from 'node:fs'
+import { store } from './store'
+import { objects } from './objects'
 
 const dir = './data'
 
@@ -16,15 +18,21 @@ export class Server extends http.Server {
   constructor(public app = express()) {
     super(app)
     app.use(async (req, res, next) => {
-      const { method, path } = req
-      const event = { ...req.headers, method, path }
-      const hasContent = parseInt(req.headers['content-length'] || '')
-      const ev = await events.add(event, hasContent ? req : undefined)
-      const { id, date } = ev
-      res.setHeader('Event-ID', id)
-      res.setHeader('Event-Date', date.toISOString())
-      if (hasContent) req.body = id
-      res.locals.event = ev
+      const { method, path, headers } = req
+      const event = await events.add({ ...headers, method, path })
+      res.setHeader('Event-ID', event.id)
+      res.setHeader('Event-Date', event.date.toISOString())
+      res.locals.event = event
+      if (parseInt(headers['content-length'] || '')) {
+        if (headers['content-type'] === 'application/json') {
+          const data = await new Promise<string>((resolve) => {
+            let data = ''
+            req.on('data', (chunk) => (data += chunk))
+            req.on('end', () => resolve(data))
+          })
+          await objects.set(event.id, JSON.parse(data))
+        } else await store.set(event.id, req)
+      }
       next()
     })
     app.use(sse)
@@ -34,12 +42,14 @@ export class Server extends http.Server {
       try {
         const { id, event } = res.locals.event
         await mkdir(join(dir, path), { recursive: true })
-        await copyFile(join(events.dir, id), join(dir, path, id))
+        if (headers['content-type'] === 'application/json') await objects.copy(id, join(dir, path, id))
+        else await store.copy(id, join(dir, path, id))
 
         const data: Record<string, unknown> = await new Promise((resolve) => {
-          if (headers['content-type'] !== 'application/json') resolve({})
-          readFile(join(events.dir, id), 'utf-8')
-            .then((text) => resolve(JSON.parse(text)))
+          if (headers['content-type'] !== 'application/json') return resolve({})
+          objects
+            .get(id)
+            .then(resolve)
             .catch(() => resolve({}))
         })
 
@@ -119,7 +129,7 @@ export class Server extends http.Server {
         if (headers['content-type'] !== 'application/json') return next()
         const { id: eventId, event } = res.locals.event
         const before = JSON.parse(await readFile(join(dir, path), 'utf-8'))
-        const patch = JSON.parse(await readFile(join(events.dir, eventId), 'utf-8'))
+        const patch = await objects.get(eventId)
         const data = { ...before, ...patch }
         await writeFile(join(dir, path), JSON.stringify(data), 'utf-8')
 
@@ -135,8 +145,7 @@ export class Server extends http.Server {
         await updateIndex
         events.add({ ...event, ...data, id, type: 'updated' })
         res.sendStatus(200)
-      } catch (e) {
-        console.error(e)
+      } catch {
         next()
       }
     })

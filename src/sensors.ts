@@ -4,6 +4,7 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { events } from './events'
 import { sequencer } from '.'
+import { objects } from './objects'
 
 export const sensors = Router()
 
@@ -14,7 +15,7 @@ sensors.post('/sensors/:id/events', async ({ params: { id } }, res, next) => {
   try {
     const { id: eventId, event } = res.locals.event
     const before = JSON.parse(await readFile(join(dir, id), 'utf-8').catch(() => '{}'))
-    const patch = JSON.parse(await readFile(join(events.dir, eventId), 'utf-8'))
+    const patch = await objects.get(eventId)
     const data = { ...before, ...patch }
     await writeFile(join(dir, id), JSON.stringify(data), 'utf-8')
 
