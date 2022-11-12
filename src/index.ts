@@ -7,8 +7,7 @@ import { events } from './events'
 import { mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createReadStream } from 'node:fs'
-import { store } from './store'
-import { objects } from './objects'
+import { addIndex, getIndex, removeIndex, updateIndex } from './resource'
 
 const dir = './data'
 
@@ -19,20 +18,10 @@ export class Server extends http.Server {
     super(app)
     app.use(async (req, res, next) => {
       const { method, path, headers } = req
-      const event = await events.add({ ...headers, method, path })
+      const event = await events.add({ ...headers, method, path }, req)
       res.setHeader('Event-ID', event.id)
       res.setHeader('Event-Date', event.date.toISOString())
       res.locals.event = event
-      if (parseInt(headers['content-length'] || '')) {
-        if (headers['content-type'] === 'application/json') {
-          const data = await new Promise<string>((resolve) => {
-            let data = ''
-            req.on('data', (chunk) => (data += chunk))
-            req.on('end', () => resolve(data))
-          })
-          await objects.set(event.id, JSON.parse(data))
-        } else await store.set(event.id, req)
-      }
       next()
     })
     app.use(sse)
@@ -42,26 +31,9 @@ export class Server extends http.Server {
       try {
         const { id, event } = res.locals.event
         await mkdir(join(dir, path), { recursive: true })
-        if (headers['content-type'] === 'application/json') await objects.copy(id, join(dir, path, id))
-        else await store.copy(id, join(dir, path, id))
-
-        const data: Record<string, unknown> = await new Promise((resolve) => {
-          if (headers['content-type'] !== 'application/json') return resolve({})
-          objects
-            .get(id)
-            .then(resolve)
-            .catch(() => resolve({}))
-        })
-
-        const index = join(dir, path, 'index.json')
-        const addIndex = (sequencer.get(index) || Promise.resolve()).then(async () => {
-          const text = await readFile(index, 'utf-8').catch(() => '[]')
-          const indexes: unknown[] = JSON.parse(text)
-          indexes.push({ ...event, ...data, id })
-          await writeFile(index, JSON.stringify(indexes), 'utf-8')
-        })
-        sequencer.set(index, addIndex)
-        await addIndex
+        await events.copyContent(id, join(dir, path, id), headers['content-type'])
+        const data = headers['content-type'] === 'application/json' ? await events.getJsonContent(id) : {}
+        await addIndex(join(dir, path, 'index.json'), id, { ...event, ...data })
         events.add({ ...event, ...data, id, type: 'created' })
         res.status(201).json(id)
       } catch {
@@ -70,16 +42,9 @@ export class Server extends http.Server {
     })
     app.get(':parent(*)/:id', async ({ path, params: { parent, id } }, res, next) => {
       try {
-        const text = await readFile(join(dir, parent, 'index.json'), 'utf-8')
-        const indexes: { id: string; 'content-type'?: string; 'content-length'?: string }[] = JSON.parse(text)
-        const index = indexes.find((v) => v.id === id)
-        if (!index) return next()
-
+        const index = await getIndex<{ 'content-type'?: string }>(join(dir, parent, 'index.json'), id)
         res.set({ 'content-type': index['content-type'] })
-        const reader = createReadStream(join(dir, path))
-        reader.on('error', () => next())
-        reader.pipe(res)
-        await new Promise((r) => reader.on('end', r))
+        createReadStream(join(dir, path)).pipe(res)
       } catch {
         next()
       }
@@ -106,18 +71,7 @@ export class Server extends http.Server {
       try {
         const { event } = res.locals.event
         await rm(join(dir, path))
-        const index = join(dir, parent, 'index.json')
-        const deleteIndex = (sequencer.get(index) || Promise.resolve()).then(async () => {
-          const text = await readFile(index, 'utf-8')
-          const indexes: { id: string; 'content-type'?: string; 'content-length'?: string }[] = JSON.parse(text)
-          const i = indexes.findIndex((v) => v.id === id)
-          if (i >= 0) {
-            indexes.splice(i, 1)
-            await writeFile(index, JSON.stringify(indexes), 'utf-8')
-          }
-        })
-        sequencer.set(index, deleteIndex)
-        await deleteIndex
+        await removeIndex(join(dir, parent, 'index.json'), id)
         events.add({ ...event, id, type: 'deleted' })
         res.sendStatus(200)
       } catch {
@@ -129,20 +83,10 @@ export class Server extends http.Server {
         if (headers['content-type'] !== 'application/json') return next()
         const { id: eventId, event } = res.locals.event
         const before = JSON.parse(await readFile(join(dir, path), 'utf-8'))
-        const patch = await objects.get(eventId)
+        const patch = await events.getJsonContent(eventId)
         const data = { ...before, ...patch }
         await writeFile(join(dir, path), JSON.stringify(data), 'utf-8')
-
-        const index = join(dir, parent, 'index.json')
-        const updateIndex = (sequencer.get(index) || Promise.resolve()).then(async () => {
-          const indexes: { id: string }[] = JSON.parse(await readFile(index, 'utf-8').catch(() => '[]'))
-          const i = indexes.findIndex((v) => v.id === id)
-          if (i >= 0) indexes.splice(i, 1)
-          indexes.push({ ...event, ...data, id })
-          await writeFile(index, JSON.stringify(indexes), 'utf-8')
-        })
-        sequencer.set(index, updateIndex)
-        await updateIndex
+        await updateIndex(join(dir, parent, 'index.json'), id, { ...event, ...data })
         events.add({ ...event, ...data, id, type: 'updated' })
         res.sendStatus(200)
       } catch {
