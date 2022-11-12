@@ -5,7 +5,7 @@ import { sensors } from './sensors'
 import { sse } from './sse'
 import { events } from './events'
 import { mkdir, readFile, writeFile, copyFile, rm } from 'node:fs/promises'
-import { join, dirname } from 'node:path'
+import { join } from 'node:path'
 import { createReadStream } from 'node:fs'
 
 const dir = './data'
@@ -33,7 +33,7 @@ export class Server extends http.Server {
     app.post('*', async ({ path, headers }, res, next) => {
       try {
         const { id, event } = res.locals.event
-        await mkdir(dirname(join(dir, path)), { recursive: true })
+        await mkdir(join(dir, path), { recursive: true })
         await copyFile(join(events.dir, id), join(dir, path, id))
 
         const data: Record<string, unknown> = await new Promise((resolve) => {

@@ -38,18 +38,6 @@ export class EventStore<T extends Record<string, unknown> = any> extends EventEm
     return e
   }
 
-  async find(finder: (v: T) => boolean): Promise<T> {
-    return await new Promise((resolve, reject) => {
-      const reader = createInterface(createReadStream(this.index))
-      reader.on('line', (line) => {
-        const event = JSON.parse(line)
-        if (finder(event)) resolve(event)
-      })
-      reader.on('error', reject)
-      reader.on('close', reject)
-    })
-  }
-
   async filter(filter: (v: T & { id: string }) => boolean): Promise<(T & { id: string })[]> {
     return await new Promise((resolve, reject) => {
       const events: (T & { id: string })[] = []

@@ -218,12 +218,6 @@ describe('コメント', () => {
     const data = await res.json()
     expect(data).toMatchObject({ comments: ['comment'] })
   })
-
-  it('POST /todos/notfound/comments', async () => {
-    const res = await fetch(url + '/todos/notfound/comments', { method: 'POST', body: 'comment' })
-    expect(res.status).toBe(404)
-    expect(res.ok).toBe(false)
-  })
 })
 
 describe('イベント', () => {
