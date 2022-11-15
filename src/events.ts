@@ -29,6 +29,7 @@ export class EventStore<T extends Record<string, unknown> = any> extends EventEm
 
   async add(event: T, content?: Readable): Promise<{ id: string; date: Date; event: T; content?: boolean }> {
     const id = uuid()
+    const e: Awaited<ReturnType<typeof this.add>> = { id, date: new Date(), event }
     if (content) {
       if (event['content-type'] === 'application/json') {
         const data: Record<string, unknown> = await new Promise((resolve) => {
@@ -37,9 +38,9 @@ export class EventStore<T extends Record<string, unknown> = any> extends EventEm
           content.on('end', () => resolve(JSON.parse(data)))
         })
         await appendFile(this.store, JSON.stringify({ ...data, id }) + '\n')
+        e.event = { ...e.event, ...data }
       } else await writeFile(join(this.dir, id), content)
     }
-    const e: Awaited<ReturnType<typeof this.add>> = { id, date: new Date(), event }
     await appendFile(this.index, JSON.stringify(e) + '\n')
     this.emit('added', e)
     return e
