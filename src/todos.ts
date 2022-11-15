@@ -1,106 +1,43 @@
-import { Router, json, text } from 'express'
-import { v4 as uuid } from 'uuid'
-import { readdir, readFile, writeFile, rm } from 'node:fs/promises'
+import { Router } from 'express'
+import { readFile, writeFile } from 'node:fs/promises'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { events as eventStore } from './events'
+import { events } from './events'
+import { sequencer } from '.'
 
 export const todos = Router()
 
 const dir = './data/todos'
 mkdirSync(dir, { recursive: true })
 
-todos.use(json())
-todos.use(text())
-
-const items = todos.route('/todos')
-
-items.get(async ({ query }, res, next) => {
-  const files = await readdir(dir)
-  const items = files.map(async (file) => {
-    const text = await readFile(join(dir, file), { encoding: 'utf-8' })
-    const data = JSON.parse(text)
-    return { ...data, id: file }
-  })
-  const data = await Promise.all(items)
-  if (Object.keys(query).length > 0) {
-    const filtered = data.filter((item) => {
-      return Object.entries(query).every(([k, v]) => {
-        return typeof v === 'string' && v.startsWith('!') ? item[k] !== v.slice(1) : item[k] === v
-      })
-    })
-    res.json(filtered)
-  } else res.json(data)
-})
-
-items.post(async ({ body }, res, next) => {
-  const id = uuid()
-  const event = { ...body, date: new Date(), type: 'created', todo: id }
-  const eventId = await eventStore.add(event)
-
-  await writeFile(join(dir, id), JSON.stringify({ ...body, last_event: { ...event, event: eventId } }))
-  res.status(201).json(id)
-})
-
-const item = todos.route('/todos/:id')
-
-item.get(async ({ params: { id } }, res, next) => {
+todos.post('/todos/:id/comments', async ({ params: { id } }, res, next) => {
   try {
-    const text = await readFile(join(dir, id), { encoding: 'utf-8' })
-    const data = JSON.parse(text)
-    res.json({ ...data, id })
-  } catch {
-    res.sendStatus(404)
-  }
-})
-
-item.delete(async ({ params: { id } }, res, next) => {
-  try {
-    await eventStore.add({ date: new Date(), type: 'deleted', todo: id })
-
-    await rm(join(dir, id))
-    res.end()
-  } catch (err) {
-    res.sendStatus(404)
-  }
-})
-
-item.patch(async ({ params: { id }, body }, res, next) => {
-  try {
-    const event = { ...body, date: new Date(), type: 'updated', todo: id }
-    const eventId = await eventStore.add(event)
-
-    const text = await readFile(join(dir, id), { encoding: 'utf-8' })
-    const data = JSON.parse(text)
-    await writeFile(join(dir, id), JSON.stringify({ ...data, ...body, last_event: { ...event, event: eventId } }))
-    res.end()
-  } catch {
-    res.sendStatus(404)
-  }
-})
-
-const comments = todos.route('/todos/:id/comments')
-
-comments.post(async ({ params: { id }, body }, res, next) => {
-  try {
-    const text = await readFile(join(dir, id), { encoding: 'utf-8' })
-    const data = JSON.parse(text)
+    const { id: eventId, event } = res.locals.event
+    const comment = await readFile(join(events.dir, eventId), 'utf-8')
+    const data = JSON.parse(await readFile(join(dir, id), { encoding: 'utf-8' }))
     const comments: string[] = data.comments || []
-    comments.push(body)
+    comments.push(comment)
+    await writeFile(join(dir, id), JSON.stringify({ ...data, comments }))
 
-    const event = { date: new Date(), type: 'created', todo: id, message: body }
-    const eventId = await eventStore.add(event)
+    const index = join(dir, 'index.json')
+    const updateIndex = (sequencer.get(index) || Promise.resolve()).then(async () => {
+      const indexes: { id: string }[] = JSON.parse(await readFile(index, 'utf-8'))
+      const i = indexes.findIndex((v) => v.id === id)
+      if (i >= 0) indexes.splice(i, 1)
+      indexes.push({ ...event, ...data, comments, id })
+      await writeFile(index, JSON.stringify(indexes), 'utf-8')
+    })
+    sequencer.set(index, updateIndex)
+    await updateIndex
 
-    await writeFile(join(dir, id), JSON.stringify({ ...data, comments, last_event: { ...event, event: eventId } }))
-    res.sendStatus(201)
+    await events.add({ ...event, ...data, comments, id, type: 'updated' })
+    res.sendStatus(200)
   } catch {
-    res.sendStatus(404)
+    next()
   }
 })
 
-const events = todos.route('/todos/:id/events')
-
-events.get(async ({ params: { id } }, res, next) => {
-  const events = await eventStore.filter((v) => v.event.todo === id)
-  res.json(events.map((v) => v.event))
+todos.get('/todos/:id/events', async ({ params: { id } }, res, next) => {
+  const e = await events.filter(({ event }) => event.path.startsWith('/todos') && event.id === id)
+  res.json(e.map((v) => v.event))
 })

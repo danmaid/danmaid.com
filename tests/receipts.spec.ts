@@ -46,14 +46,15 @@ describe('基本操作', () => {
     const hash = createHash('sha256').update(data).digest('hex')
     expect(hash).toBe(file.hash)
     const index = JSON.parse(await readFile('./data/receipts/index.json', 'utf-8'))
-    expect(index).toContainEqual({ id, 'Content-Type': file.type, 'Content-Length': `${file.size}` })
+    expect(index).toContainEqual(
+      expect.objectContaining({ id, 'content-type': file.type, 'content-length': `${file.size}` })
+    )
   })
 
   it('GET /receipts/:id -> 200', async () => {
     const res = await fetch(url + `/receipts/${id}`)
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Type')).toBe(`${file.type}`)
-    expect(res.headers.get('Content-Length')).toBe(`${file.size}`)
     const data = await res.buffer()
     const hash = createHash('sha256').update(data).digest('hex')
     expect(hash).toBe(file.hash)

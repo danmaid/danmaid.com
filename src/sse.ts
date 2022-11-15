@@ -7,8 +7,8 @@ export const sse: RequestHandler = (req, res, next) => {
   res.setHeader('Content-Type', 'text/event-stream')
   res.flushHeaders()
   const listener: EventListener = (ev) => {
-    res.write(`id: ${ev.id}\n`)
-    res.write(`data: ${JSON.stringify(ev)}\n\n`)
+    res.write(`data: ${JSON.stringify(ev)}\n`)
+    res.write(`id: ${ev.id}\n\n`)
   }
   events.on('added', listener)
   res.on('close', () => events.off('added', listener))
