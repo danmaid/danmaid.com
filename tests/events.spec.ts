@@ -9,7 +9,7 @@ startServer(server)
 let url: string
 beforeAll(async () => (url = getUrl(server.address())))
 
-describe('', () => {
+describe('core', () => {
   const events: MessageEvent[] = []
   let src: EventSource
 
@@ -20,13 +20,14 @@ describe('', () => {
   })
   afterAll(async () => src.close())
 
-  it('', async () => {
+  it('core', async () => {
     const body = JSON.stringify({ title: 'test' })
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
     })
+    expect(res.status).toBe(202)
     const id = res.headers.get('Event-ID')
     expect(id).toMatch(/^[\w-]+$/)
     const date = res.headers.get('Event-Date')
@@ -37,6 +38,7 @@ describe('', () => {
       'content-type': 'application/json',
       'content-length': `${body.length}`,
     })
+    await new Promise((r) => setTimeout(r, 100))
     expect(events).toContainEqual({ id, date, event })
   })
 })

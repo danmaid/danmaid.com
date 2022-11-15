@@ -28,71 +28,78 @@ export class Server extends http.Server {
     app.use(sse)
     app.use(todos)
     app.use(sensors)
-    app.post('*', async ({ path, headers }, res, next) => {
-      try {
-        const { id, event } = res.locals.event
-        await mkdir(join(dir, path), { recursive: true })
-        await events.copyContent(id, join(dir, path, id), headers['content-type'])
-        const data = headers['content-type'] === 'application/json' ? await events.getJsonContent(id) : {}
-        await addIndex(join(dir, path, 'index.json'), id, { ...event, ...data })
-        events.add({ ...event, ...data, id, type: 'created' })
-        res.status(201).json(id)
-      } catch {
-        next()
-      }
-    })
-    app.get(':parent(*)/:id', async ({ path, params: { parent, id } }, res, next) => {
-      try {
-        const index = await getIndex<{ 'content-type'?: string }>(join(dir, parent, 'index.json'), id)
-        res.set({ 'content-type': index['content-type'] })
-        createReadStream(join(dir, path)).pipe(res)
-      } catch {
-        next()
-      }
-    })
-    app.get('*', async ({ path, query }, res, next) => {
-      try {
-        const text = await readFile(join(dir, path, 'index.json'), 'utf-8')
-        const data: Record<string, unknown>[] = JSON.parse(text)
-        if (Object.keys(query).length > 0) {
-          const filtered = data.filter((item) => {
-            return Object.entries(query).every(([k, v]) => {
-              return typeof v === 'string' && v.startsWith('!') ? item[k] !== v.slice(1) : item[k] === v
-            })
-          })
-          res.json(filtered)
-        } else {
-          res.json(data)
+    app
+      .route('/:resource')
+      .post(async ({ params: { resource }, headers }, res, next) => {
+        try {
+          const { id, event } = res.locals.event
+          await mkdir(join(dir, resource), { recursive: true })
+          await events.copyContent(id, join(dir, resource, id), headers['content-type'])
+          const data = headers['content-type'] === 'application/json' ? await events.getJsonContent(id) : {}
+          await addIndex(join(dir, resource, 'index.json'), id, { ...event, ...data })
+          events.add({ ...event, ...data, id, type: 'created' })
+          res.status(201).json(id)
+        } catch {
+          next()
         }
-      } catch {
-        next()
-      }
-    })
-    app.delete(':parent(*)/:id', async ({ path, params: { parent, id } }, res, next) => {
-      try {
-        const { event } = res.locals.event
-        await rm(join(dir, path))
-        await removeIndex(join(dir, parent, 'index.json'), id)
-        events.add({ ...event, id, type: 'deleted' })
-        res.sendStatus(200)
-      } catch {
-        next()
-      }
-    })
-    app.patch(':parent(*)/:id', async ({ path, params: { parent, id }, headers }, res, next) => {
-      try {
-        if (headers['content-type'] !== 'application/json') return next()
-        const { id: eventId, event } = res.locals.event
-        const before = JSON.parse(await readFile(join(dir, path), 'utf-8'))
-        const patch = await events.getJsonContent(eventId)
-        const data = { ...before, ...patch }
-        await writeFile(join(dir, path), JSON.stringify(data), 'utf-8')
-        await updateIndex(join(dir, parent, 'index.json'), id, { ...event, ...data })
-        events.add({ ...event, ...data, id, type: 'updated' })
-        res.sendStatus(200)
-      } catch {
-        next()
-      }
-    })
+      })
+      .get(async ({ params: { resource }, query }, res, next) => {
+        try {
+          const text = await readFile(join(dir, resource, 'index.json'), 'utf-8')
+          const data: Record<string, unknown>[] = JSON.parse(text)
+          if (Object.keys(query).length > 0) {
+            const filtered = data.filter((item) => {
+              return Object.entries(query).every(([k, v]) => {
+                return typeof v === 'string' && v.startsWith('!') ? item[k] !== v.slice(1) : item[k] === v
+              })
+            })
+            res.json(filtered)
+          } else {
+            res.json(data)
+          }
+        } catch {
+          next()
+        }
+      })
+
+    app
+      .route('/:resource/:id')
+      .get(async ({ params: { resource, id } }, res, next) => {
+        try {
+          const index = await getIndex<{ 'content-type'?: string }>(join(dir, resource, 'index.json'), id)
+          res.set({ 'content-type': index['content-type'] })
+          createReadStream(join(dir, resource, id)).pipe(res)
+        } catch {
+          next()
+        }
+      })
+      .delete(async ({ params: { resource, id } }, res, next) => {
+        try {
+          const { event } = res.locals.event
+          await rm(join(dir, resource, id))
+          await removeIndex(join(dir, resource, 'index.json'), id)
+          events.add({ ...event, id, type: 'deleted' })
+          res.sendStatus(200)
+        } catch {
+          next()
+        }
+      })
+      .patch(async ({ params: { resource, id }, headers }, res, next) => {
+        try {
+          if (headers['content-type'] !== 'application/json') return next()
+          const { id: eventId, event } = res.locals.event
+          const before = JSON.parse(await readFile(join(dir, resource, id), 'utf-8'))
+          const patch = await events.getJsonContent(eventId)
+          const data = { ...before, ...patch }
+          await writeFile(join(dir, resource, id), JSON.stringify(data), 'utf-8')
+          await updateIndex(join(dir, resource, 'index.json'), id, { ...event, ...data })
+          events.add({ ...event, ...data, id, type: 'updated' })
+          res.sendStatus(200)
+        } catch {
+          next()
+        }
+      })
+
+    app.post('*', (req, res) => res.sendStatus(202))
   }
 }
