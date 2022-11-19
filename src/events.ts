@@ -37,7 +37,7 @@ export class EventStore<T extends Record<string, unknown> = any> extends EventEm
           content.on('data', (chunk) => (data += chunk))
           content.on('end', () => resolve(JSON.parse(data)))
         })
-        await appendFile(this.store, JSON.stringify({ ...data, id }) + '\n')
+        await appendFile(this.store, JSON.stringify({ ...data, _id: id }) + '\n')
         e.event = { ...e.event, ...data }
       } else await writeFile(join(this.dir, id), content)
     }
@@ -46,9 +46,9 @@ export class EventStore<T extends Record<string, unknown> = any> extends EventEm
     return e
   }
 
-  async filter(filter: (v: T & { id: string }) => boolean): Promise<(T & { id: string })[]> {
+  async filter(filter: (v: T & { id: string }) => boolean): Promise<(T & { _id: string })[]> {
     return await new Promise((resolve, reject) => {
-      const events: (T & { id: string })[] = []
+      const events: (T & { _id: string })[] = []
       const reader = createInterface(createReadStream(this.index))
       reader.on('line', (line) => {
         const event = JSON.parse(line)
@@ -66,7 +66,7 @@ export class EventStore<T extends Record<string, unknown> = any> extends EventEm
       rl.on('close', reject)
       rl.on('line', (line) => {
         const item = JSON.parse(line)
-        if (item.id === id) resolve(item)
+        if (item._id === id) resolve(item)
       })
     })
   }

@@ -8,6 +8,7 @@ import { mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createReadStream } from 'node:fs'
 import { addIndex, getIndex, removeIndex, updateIndex } from './resource'
+import cors from 'cors'
 
 const dir = './data'
 
@@ -16,6 +17,7 @@ export const sequencer = new Map<string, Promise<any>>()
 export class Server extends http.Server {
   constructor(public app = express()) {
     super(app)
+    app.use(cors({ origin: ['chrome-extension://ibndfaodijdaghpfgfomkbccnpablmki'] }))
     app.use(async (req, res, next) => {
       const { method, path, headers } = req
       const hasContent = parseInt(headers['content-length'] || '')
