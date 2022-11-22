@@ -4,6 +4,7 @@
     <title>Console</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="console.js"></script>
+    <script src="dm-send.js"></script>
     <style>
       :root {
         background-color: #000;
@@ -14,7 +15,7 @@
   <body style="height: 100vh; margin: 0; padding: 8px; box-sizing: border-box">
     <dm-console id="console" src="/" style="height: 100%">
       <div slot="input" style="display: flex">
-        <span style="flex: 1 1"></span>
+        <dm-send style="flex: 1 1"></dm-send>
         <button onclick="startCamera()">start camera</button>
         <button onclick="stopCamera()">stop camera</button>
         <dm-upload-receipt-button></dm-upload-receipt-button>
@@ -84,8 +85,7 @@
 
       const stub = new EventSourceStub()
 
-      const console = document.getElementById('console')
-      console.src = stub
+      document.getElementById('console').src = stub
 
       let timer
       function start() {
