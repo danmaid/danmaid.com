@@ -1,6 +1,7 @@
 class DmUploadReceiptButton extends HTMLElement {
   file: HTMLInputElement
   button: HTMLButtonElement
+  files: { file: File }[] = []
 
   constructor() {
     super()
@@ -20,7 +21,21 @@ class DmUploadReceiptButton extends HTMLElement {
 
   onchange = () => {
     for (const file of this.file.files as unknown as File[]) {
-      fetch('/receipts', { method: 'POST', body: file })
+      const status = { name: file.name, total: file.size, loaded: 0 }
+      // console.log('onchange', file)
+      const req = new XMLHttpRequest()
+      req.open('POST', '/receipts')
+      req.upload.onprogress = (ev) => {
+        // console.log('onprogress', ev)
+        status.loaded = ev.loaded
+        console.log(status)
+      }
+      req.upload.onload = (ev) => {
+        // console.log('onload', ev)
+        status.loaded = ev.loaded
+      }
+      req.send(file)
+      // fetch('/receipts', { method: 'POST', body: file })
     }
   }
 }

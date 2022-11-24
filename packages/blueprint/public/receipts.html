@@ -14,29 +14,28 @@
   <body>
     <div>
       <button onclick="load()">refresh</button>
+      <script>
+        async function load() {
+          const thumbnails = document.getElementById('thumbnails')
+          thumbnails.innerHTML = ''
+          const res = await fetch('/receipts')
+          const data = await res.json()
+          for (const item of data) {
+            const span = document.createElement('span')
+            span.textContent = JSON.stringify(item)
+            thumbnails.append(span)
+            // const thumbnail = document.createElement('dm-thumbnail')
+            // thumbnail.setAttribute('src', `/receipts/${item.id}`)
+            // thumbnail.setAttribute('data-text', JSON.stringify(item))
+            // thumbnails.append(thumbnail)
+          }
+        }
+        onload = () => load()
+      </script>
       <dm-upload-receipt-button></dm-upload-receipt-button>
     </div>
 
     <div id="thumbnails" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px"></div>
-
-    <template id="tmpl">
-      <style>
-        :host {
-          position: relative;
-        }
-        span {
-          position: absolute;
-          background-color: '#0005';
-          color: '#fff';
-          white-space: 'break-all';
-          bottom: 0;
-        }
-        img {
-          width: 100%;
-        }
-      </style>
-    </template>
-
     <script>
       customElements.define(
         'dm-thumbnail',
@@ -64,20 +63,24 @@
           }
         }
       )
-
-      async function load() {
-        thumbnails.innerHTML = ''
-        const res = await fetch('/receipts')
-        const data = await res.json()
-        for (const item of data) {
-          const thumbnail = document.createElement('dm-thumbnail')
-          thumbnail.setAttribute('src', `/receipts/${item.id}`)
-          thumbnail.setAttribute('data-text', JSON.stringify(item))
-          thumbnails.append(thumbnail)
-        }
-      }
-
-      onload = () => load()
     </script>
+
+    <template id="tmpl">
+      <style>
+        :host {
+          position: relative;
+        }
+        span {
+          position: absolute;
+          background-color: '#0005';
+          color: '#fff';
+          white-space: 'break-all';
+          bottom: 0;
+        }
+        img {
+          width: 100%;
+        }
+      </style>
+    </template>
   </body>
 </html>
