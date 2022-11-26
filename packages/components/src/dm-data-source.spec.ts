@@ -33,12 +33,14 @@ it('<dm-data-source src="/"> -> 初期値がロードされること', async () 
   document.body.innerHTML = `<dm-data-source id="ds" src="/"></dm-data-source>`
   const ds = document.getElementById('ds') as DmDataSource
   const loaded = new Promise((r) => ds.addEventListener('loaded', r))
+  const updated = new Promise((r) => ds.addEventListener('update:items', r))
   expect(ds.items).toStrictEqual([])
   expect(load).toBeCalled()
   expect(fetch).toBeCalled()
   await expect(loaded).resolves.toBeInstanceOf(Event)
   expect(ds.items).toStrictEqual(value)
   expect(ds.eventSource).toBeUndefined()
+  await expect(updated).resolves.toBeInstanceOf(Event)
 })
 
 it('<dm-data-source src="/" live> -> SSE 接続すること', async () => {
@@ -71,13 +73,16 @@ it('<dm-data-source src="/" live> -> live 属性削除時に SSE 切断するこ
   await expect(disconnected).resolves.toBeInstanceOf(Event)
 })
 
-it('_id のないイベントは無視すること', async () => {
+it('イベントを items に追加すること', async () => {
   jest.mocked(fetch).mockResolvedValueOnce({ ok: true, json: jest.fn() } as any)
   document.body.innerHTML = `<dm-data-source id="ds" src="/" live></dm-data-source>`
   const ds = document.getElementById('ds') as DmDataSource
   const event = new Promise((r) => ds.addEventListener('event', r))
+  const updated = new Promise((r) => ds.addEventListener('update:items', r))
   expect(ds.eventSource).toBeInstanceOf(EventSource)
-  const data = JSON.stringify({})
-  if (ds.eventSource?.onmessage) ds.eventSource.onmessage(new MessageEvent('message', { data }))
+  const data = { test: 'value' }
+  if (ds.eventSource?.onmessage) ds.eventSource.onmessage(new MessageEvent('message', { data: JSON.stringify(data) }))
   await expect(event).resolves.toBeInstanceOf(MessageEvent)
+  expect(ds.items).toContainEqual(data)
+  await expect(updated).resolves.toBeInstanceOf(Event)
 })

@@ -4,6 +4,7 @@ export class DmDataSource<T extends Record<string, unknown> = Record<string, unk
   }
   items: T[] = []
   eventSource?: EventSource
+  limit = 100
 
   constructor() {
     super()
@@ -24,8 +25,11 @@ export class DmDataSource<T extends Record<string, unknown> = Record<string, unk
     if (!src) throw Error('src not found.')
     const res = await fetch(src, { headers: { Accept: 'application/json' } })
     if (!res.ok) return
-    this.items = await res.json()
+    const items: T[] = await res.json()
+    if (!Array.isArray(items)) return
+    this.items = items.slice(-this.limit)
     this.dispatchEvent(new Event('loaded'))
+    this.dispatchEvent(new Event('update:items'))
   }
 
   connect() {
@@ -49,21 +53,9 @@ export class DmDataSource<T extends Record<string, unknown> = Record<string, unk
   }
 
   onevent({ data }: MessageEvent<T>) {
-    if (!data._id) return
-    if (data.type === 'created' || data.type === 'added') {
-      this.items.push(data)
-      this.dispatchEvent(new Event('update:items'))
-    } else if (data.type === 'updated') {
-      const index = this.items.findIndex((v) => v._id === data._id)
-      if (index < 0) return
-      this.items.splice(index, 1, data)
-      this.dispatchEvent(new Event('update:items'))
-    } else if (data.type === 'deleted' || data.type === 'removed') {
-      const index = this.items.findIndex((v) => v._id === data._id)
-      if (index < 0) return
-      this.items.splice(index, 1)
-      this.dispatchEvent(new Event('update:items'))
-    }
+    this.items.push(data)
+    if (this.items.length > this.limit) this.items.shift()
+    this.dispatchEvent(new Event('update:items'))
   }
 }
 
