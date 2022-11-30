@@ -72,17 +72,3 @@ it('<dm-data-source src="/" live> -> live 属性削除時に SSE 切断するこ
   ds.toggleAttribute('live', false)
   await expect(disconnected).resolves.toBeInstanceOf(Event)
 })
-
-it('イベントを items に追加すること', async () => {
-  jest.mocked(fetch).mockResolvedValueOnce({ ok: true, json: jest.fn() } as any)
-  document.body.innerHTML = `<dm-data-source id="ds" src="/" live></dm-data-source>`
-  const ds = document.getElementById('ds') as DmDataSource
-  const event = new Promise((r) => ds.addEventListener('event', r))
-  const updated = new Promise((r) => ds.addEventListener('update:items', r))
-  expect(ds.eventSource).toBeInstanceOf(EventSource)
-  const data = { test: 'value' }
-  if (ds.eventSource?.onmessage) ds.eventSource.onmessage(new MessageEvent('message', { data: JSON.stringify(data) }))
-  await expect(event).resolves.toBeInstanceOf(MessageEvent)
-  expect(ds.items).toContainEqual(data)
-  await expect(updated).resolves.toBeInstanceOf(Event)
-})

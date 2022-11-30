@@ -1,14 +1,18 @@
-export class DmDataSource<T extends Record<string, unknown> = Record<string, unknown>> extends HTMLElement {
+export class DmDataSource<T extends Record<string, unknown> = Record<string, unknown>>
+  extends HTMLElement
+  implements Iterable<T>
+{
   static get observedAttributes() {
     return ['src', 'live']
   }
   items: T[] = []
-  eventSource?: EventSource
-  limit = 100
+  eventSource?: EventSource;
 
-  constructor() {
-    super()
-    this.addEventListener('event', (ev) => this.onevent(ev))
+  [Symbol.iterator]() {
+    return this.items[Symbol.iterator]()
+  }
+  length() {
+    return this.items.length
   }
 
   attributeChangedCallback(name: 'src' | 'live', oldValue: string | null, newValue: string | null) {
@@ -25,9 +29,7 @@ export class DmDataSource<T extends Record<string, unknown> = Record<string, unk
     if (!src) throw Error('src not found.')
     const res = await fetch(src, { headers: { Accept: 'application/json' } })
     if (!res.ok) return
-    const items: T[] = await res.json()
-    if (!Array.isArray(items)) return
-    this.items = items.slice(-this.limit)
+    this.items = await res.json()
     this.dispatchEvent(new Event('loaded'))
     this.dispatchEvent(new Event('update:items'))
   }
@@ -50,12 +52,6 @@ export class DmDataSource<T extends Record<string, unknown> = Record<string, unk
     eventSource.onmessage = null
     this.eventSource = undefined
     this.dispatchEvent(new Event('disconnected'))
-  }
-
-  onevent({ data }: MessageEvent<T>) {
-    this.items.push(data)
-    if (this.items.length > this.limit) this.items.shift()
-    this.dispatchEvent(new Event('update:items'))
   }
 }
 

@@ -9,6 +9,7 @@
     "build": "tsc",
     "build:web": "npm run build -w packages/web",
     "build:blueprint": "npm run build -w packages/blueprint",
+    "build:components": "npm exec -w packages/components tsc -- --outDir ../blueprint/public",
     "start": "pm2 start --name danmaid.com dist/cli.js -- start",
     "start:blueprint": "pm2 start --name danmaid.com dist/cli.js -- start --blueprint",
     "stop": "pm2 stop danmaid.com",
