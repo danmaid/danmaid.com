@@ -1,4 +1,4 @@
-import { DmDataView } from './dm-data-view'
+import { DmDataView } from './dm-data-view.js'
 
 export class DmDataTable<
   T extends Record<string, unknown> & { _id: string } = Record<string, unknown> & { _id: string }

@@ -11,7 +11,7 @@ export class DmDataSource<T extends Record<string, unknown> = Record<string, unk
   [Symbol.iterator]() {
     return this.items[Symbol.iterator]()
   }
-  length() {
+  get length() {
     return this.items.length
   }
 

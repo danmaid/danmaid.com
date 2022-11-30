@@ -1,4 +1,4 @@
-import { DmDataSource } from './dm-data-source'
+import { DmDataSource } from './dm-data-source.js'
 
 export class DmDataView<T extends Record<string, unknown> = Record<string, unknown>> extends HTMLElement {
   root = this.attachShadow({ mode: 'open' })
