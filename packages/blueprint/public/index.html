@@ -22,7 +22,34 @@
         <label><input type="radio" name="tab" value="dm-data-table" />table</label>
       </aside>
       <main id="main" style="flex: 1 1">
-        <dm-console></dm-console>
+        <dm-console>
+          <div slot="input" style="display: flex">
+            <dm-send style="flex: 1 1"></dm-send>
+            <button onclick="startCamera()">start camera</button>
+            <button onclick="stopCamera()">stop camera</button>
+            <script>
+              function startCamera() {
+                fetch('/', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    type: 'start',
+                    camera: 'labo1',
+                    url: 'rtmp://a.rtmp.youtube.com/live2/8bgh-fhbb-dt08-cf9b-3hyd',
+                  }),
+                })
+              }
+              function stopCamera() {
+                fetch('/', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ type: 'stop', camera: 'labo1' }),
+                })
+              }
+            </script>
+            <dm-upload-receipt-button></dm-upload-receipt-button>
+          </div>
+        </dm-console>
       </main>
     </div>
     <dm-matrix-code
