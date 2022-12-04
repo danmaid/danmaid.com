@@ -9,6 +9,9 @@
         background-color: #000;
         color: #eee;
       }
+      .partial {
+        opacity: 0.5;
+      }
     </style>
   </head>
   <body>
@@ -61,14 +64,17 @@
           <td><input id="receipt" /></td>
           <td><button onclick="add()">add</button></td>
           <script>
-            function add() {
+            async function add() {
               const date = document.getElementById('date').value
               const partner = document.getElementById('partner').value
               const item = document.getElementById('item').value
               const price = document.getElementById('price').value
               const method = document.getElementById('method').value
               const receipt = document.getElementById('receipt').value
-              renderItem({ date, partner, item, price, method, receipt })
+              const row = renderItem({ date, partner, item, price, method, receipt })
+              row.classList.add('partial')
+              await new Promise((r) => setTimeout(r, 1000))
+              row.classList.remove('partial')
             }
           </script>
         </tr>
@@ -124,7 +130,12 @@
           editor.querySelector('#price').value = price || ''
           editor.querySelector('#method').value = method || ''
           editor.querySelector('#receipt').value = receipt || ''
-          editor.querySelector('#commit').onclick = () => row.replaceWith(tr)
+          editor.querySelector('#commit').onclick = async () => {
+            row.replaceWith(tr)
+            tr.classList.add('partial')
+            await new Promise((r) => setTimeout(r, 1000))
+            tr.classList.remove('partial')
+          }
           editor.querySelector('#cancel').onclick = () => row.replaceWith(tr)
           tr.replaceWith(row)
         }
@@ -136,8 +147,14 @@
           document.getElementById('method').value = method || ''
           document.getElementById('receipt').value = receipt || ''
         }
-        fragment.querySelector('#delete').onclick = () => tbody.removeChild(tr)
+        fragment.querySelector('#delete').onclick = async () => {
+          tr.classList.add('partial')
+          await new Promise((r) => setTimeout(r, 1000))
+          tr.classList.remove('partial')
+          tbody.removeChild(tr)
+        }
         tbody.append(fragment)
+        return tr
       }
     </script>
   </body>
