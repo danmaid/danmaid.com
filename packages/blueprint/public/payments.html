@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Account Book</title>
+    <meta http-equiv="content-language" content="ja" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        background-color: #000;
+        color: #eee;
+      }
+    </style>
+  </head>
+  <body>
+    <table>
+      <thead>
+        <tr>
+          <th>日時</th>
+          <th>相手</th>
+          <th>品名</th>
+          <th>価格</th>
+          <th>支払方法</th>
+          <th>レシート/領収書</th>
+          <td><button onclick="refresh()">refresh</button><button onclick="sample()">sample</button></td>
+          <script>
+            async function refresh() {
+              const res = await fetch('/payments', { headers: { Accept: 'application/json' } })
+              const data = await res.json()
+              render(data)
+            }
+            async function sample() {
+              const data = [
+                { date: new Date('2022-12-01').toISOString(), partner: 'コンビニ' },
+                { date: new Date('2022-12-03').toISOString(), partner: '駐車場' },
+              ]
+              render(data)
+            }
+          </script>
+        </tr>
+        <tr>
+          <td><input id="date" /></td>
+          <td><input id="partner" /></td>
+          <td><input id="item" /></td>
+          <td><input id="price" /></td>
+          <td>
+            <input id="method" />
+            <!-- <select>
+              <option selected>現金</option>
+              <optgroup label="振り込み">
+                <option>埼玉りそな銀行</option>
+              </optgroup>
+              <optgroup label="クレジットカード">
+                <option>りそなデビット xxxx6675</option>
+              </optgroup>
+              <optgroup label="立て替え">
+                <option>山田 寛治</option>
+                <option>その他</option>
+              </optgroup>
+            </select> -->
+          </td>
+          <td><input id="receipt" /></td>
+          <td><button onclick="add()">add</button></td>
+          <script>
+            function add() {
+              const date = document.getElementById('date').value
+              const partner = document.getElementById('partner').value
+              const item = document.getElementById('item').value
+              const price = document.getElementById('price').value
+              const method = document.getElementById('method').value
+              const receipt = document.getElementById('receipt').value
+              renderItem({ date, partner, item, price, method, receipt })
+            }
+          </script>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <template id="row">
+      <tr id="tr">
+        <td id="date"></td>
+        <td id="partner"></td>
+        <td id="item"></td>
+        <td id="price"></td>
+        <td id="method"></td>
+        <td id="receipt"></td>
+        <td><button id="edit">edit</button><button id="copy">copy</button><button id="delete">delete</button></td>
+      </tr>
+    </template>
+    <template id="row-edit">
+      <tr id="tr">
+        <td><input id="date" /></td>
+        <td><input id="partner" /></td>
+        <td><input id="item" /></td>
+        <td><input id="price" /></td>
+        <td><input id="method" /></td>
+        <td><input id="receipt" /></td>
+        <td><button id="commit">commit</button><button id="cancel">cancel</button></td>
+      </tr>
+    </template>
+    <script>
+      const tbody = document.getElementById('tbody')
+      function render(items) {
+        tbody.innerHTML = ''
+        items.forEach(renderItem)
+      }
+      function renderItem({ date, partner, item, price, method, receipt }) {
+        const template = document.getElementById('row')
+        const fragment = template.content.cloneNode(true)
+        const tr = fragment.querySelector('#tr')
+        fragment.querySelector('#date').textContent = date
+        fragment.querySelector('#partner').textContent = partner
+        fragment.querySelector('#item').textContent = item
+        fragment.querySelector('#price').textContent = price
+        fragment.querySelector('#method').textContent = method
+        fragment.querySelector('#receipt').textContent = receipt
+        fragment.querySelector('#edit').onclick = () => {
+          const template = document.getElementById('row-edit')
+          const editor = template.content.cloneNode(true)
+          const row = editor.querySelector('#tr')
+          editor.querySelector('#date').value = date || ''
+          editor.querySelector('#partner').value = partner || ''
+          editor.querySelector('#item').value = item || ''
+          editor.querySelector('#price').value = price || ''
+          editor.querySelector('#method').value = method || ''
+          editor.querySelector('#receipt').value = receipt || ''
+          editor.querySelector('#commit').onclick = () => row.replaceWith(tr)
+          editor.querySelector('#cancel').onclick = () => row.replaceWith(tr)
+          tr.replaceWith(row)
+        }
+        fragment.querySelector('#copy').onclick = () => {
+          document.getElementById('date').value = date || ''
+          document.getElementById('partner').value = partner || ''
+          document.getElementById('item').value = item || ''
+          document.getElementById('price').value = price || ''
+          document.getElementById('method').value = method || ''
+          document.getElementById('receipt').value = receipt || ''
+        }
+        fragment.querySelector('#delete').onclick = () => tbody.removeChild(tr)
+        tbody.append(fragment)
+      }
+    </script>
+  </body>
+</html>
