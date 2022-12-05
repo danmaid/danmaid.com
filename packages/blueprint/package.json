@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "devDependencies": {
+    "jest-environment-jsdom": "^29.3.1",
     "typescript": "^4.8.4"
   },
   "scripts": {
@@ -18,5 +19,6 @@
   "bugs": {
     "url": "https://github.com/danmaid/danmaid.com/issues"
   },
-  "homepage": "https://github.com/danmaid/danmaid.com#readme"
+  "homepage": "https://github.com/danmaid/danmaid.com#readme",
+  "type": "module"
 }
