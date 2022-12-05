@@ -20,12 +20,12 @@ interface Payment {
   receipt: string
 }
 
-export class PaymentTable<T extends Payment & { id?: string } = Payment & { id?: string }> extends HTMLTableElement {
+export class PaymentTable extends HTMLTableElement {
   thead = document.createElement('thead')
   headerRow = document.createElement('tr')
   refreshButton = createButton('refresh', () => this.dispatchEvent(new Event(`click:refresh`)))
-  addRow = document.createElement('tr', { is: 'dm-edit-payment-table-row' })
-  addButton = createButton('add', () => this.dispatchEvent(new Event(`click:add`)))
+  addRow = document.createElement('tr', { is: 'dm-edit-payment-table-row' }) as DmEditPaymentTableRow
+  addButton = createButton('add', () => this.dispatchEvent(new Event('click:add')))
   tbody = document.createElement('tbody')
 
   constructor() {
@@ -43,14 +43,14 @@ export class PaymentTable<T extends Payment & { id?: string } = Payment & { id?:
     this.thead.append(this.headerRow, this.addRow)
     this.append(this.thead, this.tbody)
     this.addEventListener('click:refresh', () => console.log('click:refresh'))
-    this.addEventListener('click:add', () => console.log('click:add'))
+    this.addEventListener('click:add', () => this.add())
   }
 
   clear() {
     this.tbody.innerHTML = ''
   }
 
-  add({ date, partner, item, price, method, receipt, id }: T) {
+  add({ date, partner, item, price, method, receipt, id }: Payment & { id?: string } = this.addRow.get()) {
     const tr = document.createElement('tr')
     if (id) tr.id = id
     else tr.classList.add('partial')
@@ -73,5 +73,16 @@ export class DmEditPaymentTableRow extends HTMLTableRowElement {
     const { date, partner, item, price, method, receipt } = this
     const columns = [date, partner, item, price, method, receipt].map((v) => wrapTd(v))
     this.append(...columns)
+  }
+
+  get(): Payment {
+    return {
+      date: this.date.value,
+      partner: this.partner.value,
+      item: this.item.value,
+      price: this.price.value,
+      method: this.method.value,
+      receipt: this.receipt.value,
+    }
   }
 }
