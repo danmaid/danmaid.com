@@ -1,5 +1,6 @@
 export class API<T = unknown> {
   path
+  events?: EventSource
 
   constructor(path: string) {
     this.path = path
@@ -33,5 +34,16 @@ export class API<T = unknown> {
   async delete(id: string): Promise<void> {
     const res = await fetch(`${this.path}/${id}`, { method: 'DELETE' })
     if (!res.ok) throw res
+  }
+
+  connect(): EventSource {
+    const events = new EventSource(this.path)
+    window.addEventListener('unload', () => events.close())
+    this.events = events
+    return events
+  }
+
+  disconnect(): void {
+    this.events?.close()
   }
 }

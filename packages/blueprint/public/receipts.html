@@ -17,6 +17,40 @@
       <dm-upload-receipt-button></dm-upload-receipt-button>
     </div>
 
+    <table>
+      <thead>
+        <th>id</th>
+        <td><button id="refresh">refresh</button><button onclick="addRow()">add</button></td>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <script type="module">
+      import { API } from './API.js'
+      const api = new API('/receipts')
+
+      document.getElementById('refresh').onclick = async () => {
+        api.events?.removeEventListener('message', onmessage)
+        const data = await api.list()
+        api.connect()
+        api.events.addEventListener('message', onmessage)
+        data.forEach((v) => addRow(v))
+      }
+
+      function onmessage(ev) {
+        const data = JSON.parse(ev.data)
+        console.log(data)
+      }
+
+      function addRow(v) {
+        const tr = document.createElement('tr')
+        tr.id = v.id
+        const id = document.createElement('td')
+        id.textContent = tr.id
+        tr.append(id)
+        document.getElementById('tbody').append(tr)
+      }
+    </script>
+
     <div id="thumbnails" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px"></div>
 
     <template id="tmpl">
@@ -79,5 +113,11 @@
 
       onload = () => load()
     </script>
+
+    <dm-matrix-code
+      src="/"
+      style="position: fixed; top: 0; left: 0; bottom: 0; right: 0; z-index: -999"
+    ></dm-matrix-code>
+    <script src="matrix-code.js"></script>
   </body>
 </html>
