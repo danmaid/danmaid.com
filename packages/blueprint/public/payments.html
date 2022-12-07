@@ -15,9 +15,21 @@
     </style>
   </head>
   <body>
-    <table is="dm-payment-table"></table>
-    <script src="dm-payment-table.js" type="module"></script>
-    <!-- <select>
+    <table>
+      <thead>
+        <tr>
+          <th>日時</th>
+          <th>相手</th>
+          <th>品名</th>
+          <th>価格</th>
+          <th>支払方法</th>
+          <th>レシート/領収書</th>
+          <td><button id="refresh">refresh</button><button id="sample">sample</button></td>
+        </tr>
+        <tr id="add-row" is="dm-payment-table-row" edit no-action>
+          <td id="actions"><button id="add">add</button><button id="clear">clear</button></td>
+        </tr>
+        <!-- <select>
               <option selected>現金</option>
               <optgroup label="振り込み">
                 <option>埼玉りそな銀行</option>
@@ -30,6 +42,64 @@
                 <option>その他</option>
               </optgroup>
             </select> -->
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <script type="module">
+      import { API } from './API.js'
+      import { PaymentTableRow } from './PaymentTableRow.js'
+
+      const api = new API('/payments')
+      customElements.define('dm-payment-table-row', PaymentTableRow, { extends: 'tr' })
+      customElements.whenDefined('dm-payment-table-row').then(() => {
+        const actions = document.getElementById('actions')
+        actions.parentElement.append(actions)
+      })
+
+      document.getElementById('refresh').onclick = async () => {
+        clearItems()
+        const data = await api.list()
+        data.forEach((v) => addItem(v))
+      }
+      document.getElementById('sample').onclick = async () => {
+        clearItems()
+        const data = [
+          { date: new Date('2022-12-01').toISOString(), partner: 'コンビニ' },
+          { date: new Date('2022-12-03').toISOString(), partner: '駐車場' },
+        ]
+        data.forEach((v) => addItem(v))
+      }
+
+      const addRow = document.getElementById('add-row')
+      document.getElementById('add').onclick = async () => {
+        const row = addItem(addRow.value)
+        row.setAttribute('partial')
+        row.id = await api.create(addRow.value)
+        row.removeAttribute('partial')
+      }
+      document.getElementById('clear').onclick = () => (addRow.value = null)
+
+      const tbody = document.getElementById('tbody')
+      const clearItems = () => (tbody.innerHTML = '')
+
+      function addItem({ id, ...v }) {
+        const row = document.createElement('tr', { is: 'dm-payment-table-row' })
+        row.value = v
+        row.id = id
+        row.addEventListener('copy', () => (addRow.value = row.value))
+        row.addEventListener('commit', async () => {
+          await api.update(id, row.value)
+          row.removeAttribute('partial')
+        })
+        row.addEventListener('delete', async () => {
+          await api.delete(id)
+          row.remove()
+        })
+        tbody.append(row)
+        return row
+      }
+    </script>
 
     <dm-matrix-code
       src="/"

@@ -100,7 +100,7 @@ export class PaymentTableRow extends HTMLTableRowElement {
   }
 
   attributeChangedCallback(name: 'edit' | 'partial', oldValue: boolean, newValue: boolean) {
-    if (name === 'edit') newValue !== null ? this.setEditor() : this.setValue()
+    if (name === 'edit') newValue !== null ? this.setEditor(this.#value) : this.setValue(this.#value)
     if (name === 'partial')
       if (newValue !== null) {
         this.edit.disabled = true
