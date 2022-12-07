@@ -74,7 +74,7 @@
       const addRow = document.getElementById('add-row')
       document.getElementById('add').onclick = async () => {
         const row = addItem(addRow.value)
-        row.setAttribute('partial')
+        row.toggleAttribute('partial', true)
         row.id = await api.create(addRow.value)
         row.removeAttribute('partial')
       }
