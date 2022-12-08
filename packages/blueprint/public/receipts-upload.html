@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Upload Receipts</title>
+    <meta http-equiv="content-language" content="ja" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="upload-receipt-button.js"></script>
+    <style>
+      :root {
+        background-color: #000;
+        color: #eee;
+      }
+    </style>
+  </head>
+  <body>
+    <input type="file" id="input" accept="image/*,.pdf" multiple style="display: none" />
+    クリックしてアップロード
+    <template id="loading"><slot name="loading">loading</slot></template>
+    <hr />
+
+    <table>
+      <thead>
+        <tr>
+          <th>name</th>
+          <th>status</th>
+          <th>id</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <script>
+      function wrap(tag, text) {
+        const e = document.createElement(tag)
+        e.textContent = text
+        return e
+      }
+
+      const tbody = document.getElementById('tbody')
+      const input = document.getElementById('input')
+      const onclick = () => input.click()
+      input.onchange = async () => {
+        window.onclick = null
+        const fetches = Array.from(input.files).map(async (body) => {
+          const tr = document.createElement('tr')
+          tr.append(wrap('td', body.name))
+          tbody.append(tr)
+          const res = await fetch('/receipts', { method: 'POST', body })
+          tr.append(wrap('td', res.status))
+          tr.append(wrap('td', await res.json()))
+        })
+        await Promise.all(fetches)
+        window.onclick = onclick
+      }
+      window.onclick = onclick
+    </script>
+
+    <dm-matrix-code
+      src="/"
+      style="position: fixed; top: 0; left: 0; bottom: 0; right: 0; z-index: -999"
+    ></dm-matrix-code>
+    <script src="matrix-code.js"></script>
+  </body>
+</html>
