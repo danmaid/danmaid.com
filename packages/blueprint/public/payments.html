@@ -15,27 +15,33 @@
     </style>
   </head>
   <body>
-    <section>
+    <section class="half">
       <h2>未処理</h2>
-      <button onclick="loadBacklogs()">refresh</button>
-      <ul id="ul">
-        <li>xxx</li>
-        <li>yyy</li>
-        <li>zzz</li>
-      </ul>
+      <button id="refreshBacklogs">refresh</button>
+      <div id="backlogs"></div>
+      <style>
+        .half {
+          max-height: 50vh;
+          overflow: auto;
+        }
+        #backlogs img {
+          max-height: 200px;
+          max-width: 200px;
+        }
+      </style>
 
       <script>
-        const ul = document.getElementById('ul')
-        async function loadBacklogs() {
+        const backlogs = document.getElementById('backlogs')
+        document.getElementById('refreshBacklogs').onclick = async () => {
+          backlogs.innerHTML = ''
           const res = await fetch('/receipts?payments=', { headers: { Accept: 'application/json' } })
           if (!res.ok) throw res
-          const items = await res.json()
-          const lis = items.map((item) => {
-            const li = document.createElement('li')
-            li.textContent = item
-            return li
+          const items = (await res.json()).map(({ path, id }) => {
+            const img = document.createElement('img')
+            img.src = `${path}/${id}`
+            return img
           })
-          ul.append(...lis)
+          backlogs.append(...items)
         }
       </script>
     </section>
