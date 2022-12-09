@@ -139,7 +139,24 @@
           row.id = id
           row.addEventListener('copy', () => (addRow.value = row.value))
           row.addEventListener('commit', async () => {
-            await api.update(id, row.value)
+            const value = row.value
+            await api.update(id, value)
+            if (value.receipt) {
+              const res = await fetch(`/receipts/${value.receipt}`, { headers: { Accept: 'application/json' } })
+              if (!res.ok) throw res
+              const data = await res.json()
+              if (!data.payments) data.payments = id
+              else if (Array.isArray(data.payments)) {
+                if (!data.payments.includes(id)) data.payments.push(id)
+                else throw Error('not supported.')
+              } else throw Error('not supported.')
+              const result = await fetch(`/receipts/${value.receipt}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ payments: data.payments }),
+              })
+              if (!result.ok) throw result
+            }
             row.removeAttribute('partial')
           })
           row.addEventListener('delete', async () => {
