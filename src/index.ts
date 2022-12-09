@@ -52,7 +52,11 @@ export class Server extends http.Server {
           if (Object.keys(query).length > 0) {
             const filtered = data.filter((item) => {
               return Object.entries(query).every(([k, v]) => {
-                return typeof v === 'string' && v.startsWith('!') ? item[k] !== v.slice(1) : item[k] === v
+                return typeof v === 'string' && v.startsWith('!')
+                  ? item[k] !== v.slice(1)
+                  : !v
+                  ? !item[k]
+                  : item[k] === v
               })
             })
             res.json(filtered)
