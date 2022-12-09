@@ -105,9 +105,27 @@
 
         const addRow = document.getElementById('add-row')
         document.getElementById('add').onclick = async () => {
-          const row = addItem(addRow.value)
+          const value = addRow.value
+          const row = addItem(value)
           row.toggleAttribute('partial', true)
-          row.id = await api.create(addRow.value)
+          const id = await api.create(value)
+          row.id = id
+          if (value.receipt) {
+            const res = await fetch(`/receipts/${value.receipt}`, { headers: { Accept: 'application/json' } })
+            if (!res.ok) throw res
+            const data = await res.json()
+            if (!data.payments) data.payments = id
+            else if (Array.isArray(data.payments)) {
+              if (!data.payments.includes(id)) data.payments.push(id)
+              else throw Error('not supported.')
+            } else throw Error('not supported.')
+            const result = await fetch(`/receipts/${value.receipt}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+              body: JSON.stringify(data.payments),
+            })
+            if (!result.ok) throw result
+          }
           row.removeAttribute('partial')
         }
         document.getElementById('clear').onclick = () => (addRow.value = null)

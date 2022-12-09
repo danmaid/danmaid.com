@@ -66,4 +66,29 @@ describe('基本操作', () => {
     const data = await res.json()
     expect(data).toContainEqual(expect.objectContaining({ id }))
   })
+
+  it('GET /receipts/:id application/json -> 200', async () => {
+    const res = await fetch(url + `/receipts/${id}`, { headers: { Accept: 'application/json' } })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Content-Type')).toMatch('application/json')
+    const data = await res.json()
+    expect(data).toMatchObject({ 'content-type': file.type })
+  })
+
+  it('PATCH /receipts/:id -> 200', async () => {
+    const res = await fetch(url + `/receipts/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payments: 'hoge' }),
+    })
+    expect(res.status).toBe(200)
+  })
+
+  it('GET /receipts/:id application/json -> 200', async () => {
+    const res = await fetch(url + `/receipts/${id}`, { headers: { Accept: 'application/json' } })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Content-Type')).toMatch('application/json')
+    const data = await res.json()
+    expect(data).toMatchObject({ payments: 'hoge' })
+  })
 })

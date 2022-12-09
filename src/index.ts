@@ -70,11 +70,15 @@ export class Server extends http.Server {
 
     app
       .route('/:resource/:id')
-      .get(async ({ params: { resource, id } }, res, next) => {
+      .get(async ({ params: { resource, id }, headers }, res, next) => {
         try {
           const index = await getIndex<{ 'content-type'?: string }>(join(dir, resource, 'index.json'), id)
-          res.set({ 'content-type': index['content-type'] })
-          createReadStream(join(dir, resource, id)).pipe(res)
+          if (headers.accept === 'application/json') {
+            res.json(index)
+          } else {
+            res.set({ 'content-type': index['content-type'] })
+            createReadStream(join(dir, resource, id)).pipe(res)
+          }
         } catch {
           next()
         }
@@ -94,14 +98,22 @@ export class Server extends http.Server {
         try {
           if (headers['content-type'] !== 'application/json') return next()
           const { id: eventId, event } = res.locals.event
-          const before = JSON.parse(await readFile(join(dir, resource, id), 'utf-8'))
+          const index = await getIndex<{ 'content-type'?: string }>(join(dir, resource, 'index.json'), id)
           const patch = await events.getJsonContent(eventId)
-          const data = { ...before, ...patch }
-          await writeFile(join(dir, resource, id), JSON.stringify(data), 'utf-8')
-          await updateIndex(join(dir, resource, 'index.json'), id, { ...event, ...data })
-          events.add({ ...event, ...data, id, type: 'updated' })
-          res.sendStatus(200)
-        } catch {
+          if (index['content-type'] === 'application/json') {
+            const before = JSON.parse(await readFile(join(dir, resource, id), 'utf-8'))
+            const data = { ...before, ...patch }
+            await writeFile(join(dir, resource, id), JSON.stringify(data), 'utf-8')
+            await updateIndex(join(dir, resource, 'index.json'), id, { ...event, ...data })
+            events.add({ ...event, ...data, id, type: 'updated' })
+            res.sendStatus(200)
+          } else {
+            await updateIndex(join(dir, resource, 'index.json'), id, { ...event, ...index, ...patch })
+            events.add({ ...event, ...index, ...patch, id, type: 'updated' })
+            res.sendStatus(200)
+          }
+        } catch (e) {
+          console.log(e)
           next()
         }
       })
