@@ -122,7 +122,7 @@
             const result = await fetch(`/receipts/${value.receipt}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-              body: JSON.stringify(data.payments),
+              body: JSON.stringify({ payments: data.payments }),
             })
             if (!result.ok) throw result
           }

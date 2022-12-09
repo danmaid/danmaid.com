@@ -91,4 +91,11 @@ describe('基本操作', () => {
     const data = await res.json()
     expect(data).toMatchObject({ payments: 'hoge' })
   })
+
+  it('GET /receipts -> 200', async () => {
+    const res = await fetch(url + `/receipts`)
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data).toContainEqual(expect.objectContaining({ payments: 'hoge' }))
+  })
 })
