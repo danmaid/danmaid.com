@@ -39,6 +39,7 @@
           const items = (await res.json()).map(({ path, id }) => {
             const img = document.createElement('img')
             img.src = `${path}/${id}`
+            img.onclick = () => navigator.clipboard.writeText(id)
             return img
           })
           backlogs.append(...items)
