@@ -20,5 +20,51 @@
       src="/"
       style="position: fixed; top: 0; left: 0; bottom: 0; right: 0; z-index: -999"
     ></dm-matrix-code>
+
+    <div id="container" style="position: fixed; top: 0; left: 0; bottom: 0; right: 0"></div>
+    <script>
+      const src = new EventSource('/')
+      const container = document.getElementById('container')
+      src.onmessage = (ev) => {
+        const event = JSON.parse(ev.data)
+        const id = event.event.ip + event.event.path
+        const elem = document.getElementById(id) || createElement(id)
+        elem.style.opacity = 1
+        elem.innerHTML = ''
+        if (event.event.type === 'sensed') {
+          const humidity = document.createElement('div')
+          humidity.textContent = `humidity: ${event.event.humidity}`
+          const temperature = document.createElement('div')
+          temperature.textContent = `temperature: ${event.event.temperature}`
+          const magnet = document.createElement('div')
+          magnet.textContent = `magnet: ${event.event.magnet}`
+          elem.append(temperature, humidity, magnet)
+        } else elem.textContent = ev.data
+        container.append(elem)
+        setTimeout(() => {
+          elem.style.opacity = 0
+          elem.ontransitionend = () => elem.remove()
+        }, 100)
+      }
+
+      function createElement(id) {
+        const elem = document.createElement('div')
+        elem.id = id
+        elem.style.transition = 'opacity 10s'
+        elem.style.wordBreak = 'break-all'
+        elem.classList.add('xxx')
+        if (elem.id.includes('810A56CF')) {
+          elem.style.position = 'absolute'
+          elem.style.left = '10%'
+          elem.style.top = '10%'
+        }
+        if (elem.id.includes('810A7DE3')) {
+          elem.style.position = 'absolute'
+          elem.style.left = '20%'
+          elem.style.top = '20%'
+        }
+        return elem
+      }
+    </script>
   </body>
 </html>
