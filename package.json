@@ -5,12 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "dev": "ts-node src/cli start --blueprint",
+    "dev": "ts-node src/cli start --web",
     "build": "tsc",
     "build:web": "npm run build -w packages/web",
-    "build:blueprint": "npm run build -w packages/blueprint",
     "start": "pm2 start --name danmaid.com dist/cli.js -- start",
-    "start:blueprint": "pm2 start --name danmaid.com dist/cli.js -- start --blueprint",
+    "start:web": "pm2 start --name danmaid.com dist/cli.js -- start --web",
     "stop": "pm2 stop danmaid.com",
     "status": "pm2 status",
     "migrate": "ts-node src/migrate"

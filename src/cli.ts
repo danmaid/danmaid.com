@@ -7,12 +7,12 @@ program
   .command('start')
   .description('start server')
   .option('-p, --port <number>', 'listen port', (v) => parseInt(v), 8520)
-  .option('--blueprint')
-  .action(({ port, blueprint }) => {
+  .option('--web')
+  .action(({ port, web }) => {
     const app = express()
     app.use(morgan('combined'))
-    if (blueprint) {
-      const serve = express.static('packages/blueprint/public')
+    if (web) {
+      const serve = express.static('packages/web/public')
       app.use((req, res, next) => {
         if (req.accepts().includes('text/event-stream')) next()
         else serve(req, res, next)

@@ -3,4 +3,4 @@ lib
 coverage
 data
 dist
-blueprint/*.js
+web/*.js
