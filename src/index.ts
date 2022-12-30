@@ -19,9 +19,9 @@ export class Server extends http.Server {
     super(app)
     app.use(cors({ origin: ['chrome-extension://ibndfaodijdaghpfgfomkbccnpablmki'] }))
     app.use(async (req, res, next) => {
-      const { method, path, headers, ip } = req
+      const { method, path, headers, ip, ips } = req
       const hasContent = parseInt(headers['content-length'] || '')
-      const event = await events.add({ ...headers, ip, method, path }, hasContent ? req : undefined)
+      const event = await events.add({ ...headers, ip, ips, method, path }, hasContent ? req : undefined)
       res.setHeader('Event-ID', event.id)
       res.setHeader('Event-Date', event.date.toISOString())
       res.locals.event = event
