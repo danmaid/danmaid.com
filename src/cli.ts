@@ -11,9 +11,11 @@ program
   .option('-p, --port <number>', 'listen port', (v) => parseInt(v), 8520)
   .option('--web')
   .option('--event-proxy')
-  .action(({ port, web, eventProxy }) => {
+  .option('--behind-proxy')
+  .action(({ port, web, eventProxy, behindProxy }) => {
     const app = express()
     app.use(morgan('combined'))
+    if (behindProxy) app.set('trust proxy', true)
     if (eventProxy) {
       const proxy = new EventSource('https://labo.danmaid.com')
       proxy.onmessage = (ev) => {
