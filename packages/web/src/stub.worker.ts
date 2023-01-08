@@ -1,3 +1,4 @@
+// @ts-ignore
 const sw = self as ServiceWorkerGlobalScope & Window & typeof globalThis
 
 sw.addEventListener('install', () => {
@@ -94,12 +95,8 @@ sw.addEventListener('fetch', (ev) => {
                   eventStream.addEventListener('event', (ev) => {
                     console.debug('event received.', ev)
                     const e = (ev as CustomEvent).detail
-                    const t = `id: ${e.event_id}\ndata: ${JSON.stringify(
-                      e
-                    )}\n\n`
-                    controller.enqueue(
-                      Uint8Array.from(t, (x) => x.charCodeAt(0))
-                    )
+                    const t = `id: ${e.event_id}\ndata: ${JSON.stringify(e)}\n\n`
+                    controller.enqueue(Uint8Array.from(t, (x) => x.charCodeAt(0)))
                   })
                 },
               })
@@ -139,17 +136,15 @@ sw.addEventListener('fetch', (ev) => {
             const events = tran.objectStore('events')
             const todos = tran.objectStore('todos')
 
-            const eventId = await new Promise<IDBValidKey>(
-              (resolve, reject) => {
-                const req = events.add({
-                  date: new Date(),
-                  type: 'created',
-                  ...todo,
-                })
-                req.onsuccess = () => resolve(req.result)
-                req.onerror = () => reject(req.error)
-              }
-            )
+            const eventId = await new Promise<IDBValidKey>((resolve, reject) => {
+              const req = events.add({
+                date: new Date(),
+                type: 'created',
+                ...todo,
+              })
+              req.onsuccess = () => resolve(req.result)
+              req.onerror = () => reject(req.error)
+            })
             const last_event = await new Promise((resolve, reject) => {
               const req = events.get(eventId)
               req.onsuccess = () => resolve(req.result)
@@ -164,9 +159,7 @@ sw.addEventListener('fetch', (ev) => {
               tran.oncomplete = () => resolve()
               tran.onerror = () => reject(tran.error)
             })
-            eventStream.dispatchEvent(
-              new CustomEvent('event', { detail: last_event })
-            )
+            eventStream.dispatchEvent(new CustomEvent('event', { detail: last_event }))
             return new Response(JSON.stringify(result), {
               status: 201,
               headers: { 'Content-Type': 'application/json' },
@@ -187,28 +180,24 @@ sw.addEventListener('fetch', (ev) => {
             const events = tran.objectStore('events')
             const todos = tran.objectStore('todos')
 
-            const todo = await new Promise<Todo | undefined>(
-              (resolve, reject) => {
-                const req = todos.get(id)
-                req.onsuccess = () => resolve(req.result)
-                req.onerror = () => reject(req.error)
-              }
-            )
+            const todo = await new Promise<Todo | undefined>((resolve, reject) => {
+              const req = todos.get(id)
+              req.onsuccess = () => resolve(req.result)
+              req.onerror = () => reject(req.error)
+            })
             if (!todo) return new Response(null, { status: 404 })
 
-            const eventId = await new Promise<IDBValidKey>(
-              (resolve, reject) => {
-                const req = events.add({
-                  date: new Date(),
-                  type: 'updated',
-                  id,
-                  keys: Object.keys(patch),
-                  ...patch,
-                })
-                req.onsuccess = () => resolve(req.result)
-                req.onerror = () => reject(req.error)
-              }
-            )
+            const eventId = await new Promise<IDBValidKey>((resolve, reject) => {
+              const req = events.add({
+                date: new Date(),
+                type: 'updated',
+                id,
+                keys: Object.keys(patch),
+                ...patch,
+              })
+              req.onsuccess = () => resolve(req.result)
+              req.onerror = () => reject(req.error)
+            })
             const last_event = await new Promise((resolve, reject) => {
               const req = events.get(eventId)
               req.onsuccess = () => resolve(req.result)
@@ -223,9 +212,7 @@ sw.addEventListener('fetch', (ev) => {
               tran.oncomplete = () => resolve()
               tran.onerror = () => reject(tran.error)
             })
-            eventStream.dispatchEvent(
-              new CustomEvent('event', { detail: last_event })
-            )
+            eventStream.dispatchEvent(new CustomEvent('event', { detail: last_event }))
             return new Response(JSON.stringify(result), {
               status: 200,
               headers: { 'Content-Type': 'application/json' },
@@ -266,28 +253,24 @@ sw.addEventListener('fetch', (ev) => {
             const events = tran.objectStore('events')
             const todos = tran.objectStore('todos')
 
-            const todo = await new Promise<Todo | undefined>(
-              (resolve, reject) => {
-                const req = todos.get(id)
-                req.onsuccess = () => resolve(req.result)
-                req.onerror = () => reject(req.error)
-              }
-            )
+            const todo = await new Promise<Todo | undefined>((resolve, reject) => {
+              const req = todos.get(id)
+              req.onsuccess = () => resolve(req.result)
+              req.onerror = () => reject(req.error)
+            })
             if (!todo) return new Response(null, { status: 404 })
 
-            const eventId = await new Promise<IDBValidKey>(
-              (resolve, reject) => {
-                const req = events.add({
-                  date: new Date(),
-                  type: 'updated',
-                  id,
-                  keys: ['comments'],
-                  message: comment,
-                })
-                req.onsuccess = () => resolve(req.result)
-                req.onerror = () => reject(req.error)
-              }
-            )
+            const eventId = await new Promise<IDBValidKey>((resolve, reject) => {
+              const req = events.add({
+                date: new Date(),
+                type: 'updated',
+                id,
+                keys: ['comments'],
+                message: comment,
+              })
+              req.onsuccess = () => resolve(req.result)
+              req.onerror = () => reject(req.error)
+            })
             const last_event = await new Promise((resolve, reject) => {
               const req = events.get(eventId)
               req.onsuccess = () => resolve(req.result)
@@ -304,9 +287,7 @@ sw.addEventListener('fetch', (ev) => {
               tran.oncomplete = () => resolve()
               tran.onerror = () => reject(tran.error)
             })
-            eventStream.dispatchEvent(
-              new CustomEvent('event', { detail: last_event })
-            )
+            eventStream.dispatchEvent(new CustomEvent('event', { detail: last_event }))
             return new Response(JSON.stringify(result), {
               status: 200,
               headers: { 'Content-Type': 'application/json' },
@@ -322,10 +303,7 @@ sw.addEventListener('fetch', (ev) => {
         ev.respondWith(
           (async function () {
             const db = await dbOpen
-            const ids = db
-              .transaction('events')
-              .objectStore('events')
-              .index('id_index')
+            const ids = db.transaction('events').objectStore('events').index('id_index')
 
             const data = await new Promise((resolve, reject) => {
               const req = ids.getAll(id)
