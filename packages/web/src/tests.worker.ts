@@ -1,15 +1,13 @@
 // @ts-ignore
 const sw = self as ServiceWorkerGlobalScope & Window & typeof globalThis
 
-class XXXStream extends TransformStream {
-  constructor() {
-    super({ transform(chunk, controller) {} })
-  }
-}
 async function xxx(ev: FetchEvent): Promise<Response> {
   const res = await fetch(ev.request)
-  res.body?.pipeThrough(new TextDecoderStream()).pipeThrough(new TransformStream({ transform(chunk, controller) {} }))
-  return new Response(res.body?.pipeThrough(new TextDecoderStream()).pipeThrough(new XXXStream()), res)
+  const body = await res.text()
+  const replaced = body.replaceAll("from '@playwright/test'", "from './dm-test.js'")
+  const headers = new Headers(res.headers)
+  headers.set('Content-Length', replaced.length.toString())
+  return new Response(replaced, { ...res, headers })
 }
 
 sw.addEventListener('fetch', (ev) => {
