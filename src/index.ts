@@ -11,20 +11,17 @@ import { addIndex, getIndex, removeIndex, updateIndex } from './resource'
 import cors from 'cors'
 
 const dir = './data'
+const origin = [
+  'chrome-extension://ibndfaodijdaghpfgfomkbccnpablmki',
+  'chrome-extension://hmamcnlhilpmomdgjkmeghcfcddgdkop',
+]
 
 export const sequencer = new Map<string, Promise<any>>()
 
 export class Server extends http.Server {
   constructor(public app = express()) {
     super(app)
-    app.use(
-      cors({
-        origin: [
-          'chrome-extension://ibndfaodijdaghpfgfomkbccnpablmki',
-          'chrome-extension://hmamcnlhilpmomdgjkmeghcfcddgdkop',
-        ],
-      })
-    )
+    app.use(cors({ origin }))
     app.use(async (req, res, next) => {
       const { method, path, headers, ip, ips } = req
       const hasContent = parseInt(headers['content-length'] || '')
