@@ -17,7 +17,14 @@ export const sequencer = new Map<string, Promise<any>>()
 export class Server extends http.Server {
   constructor(public app = express()) {
     super(app)
-    app.use(cors({ origin: ['chrome-extension://ibndfaodijdaghpfgfomkbccnpablmki'] }))
+    app.use(
+      cors({
+        origin: [
+          'chrome-extension://ibndfaodijdaghpfgfomkbccnpablmki',
+          'chrome-extension://hmamcnlhilpmomdgjkmeghcfcddgdkop',
+        ],
+      })
+    )
     app.use(async (req, res, next) => {
       const { method, path, headers, ip, ips } = req
       const hasContent = parseInt(headers['content-length'] || '')
