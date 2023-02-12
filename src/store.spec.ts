@@ -1,27 +1,40 @@
-import store, { Store } from './store'
-import { access } from 'node:fs/promises'
+import { Store } from './store'
+import { rm, readdir } from 'node:fs/promises'
 
-const load = jest.spyOn(Store.prototype, 'load')
-
-beforeEach(async () => jest.clearAllMocks())
-
-it('default export', async () => {
+it('1st init', async () => {
+  await rm('./data', { recursive: true }).catch(() => {})
+  const store = new Store()
   expect(store).toBeInstanceOf(Store)
-  await expect(store.ready).resolves.toBeUndefined()
-  await expect(access(store.dir)).resolves.toBeUndefined()
+  expect(store.current).toHaveProperty('maxSize')
+  expect(store.current).toHaveProperty('size')
+  expect(store.current).toHaveProperty('path')
+  await expect(readdir('./data')).resolves.toHaveLength(1)
+  await expect(store.filter(() => true)).resolves.toStrictEqual([])
+  const id = await store.add({})
+  expect(id).toMatch(/^[\w-]+$/)
+  const items = await store.filter(() => true)
+  expect(items).toHaveLength(1)
+  expect(items).toContainEqual(expect.objectContaining({ id }))
+  const item = await store.get(id)
+  expect(item).toMatchObject({ id })
+  await expect(store.get('not found')).rejects.toThrowError()
 })
 
-it('', async () => {
-  const store = new Store({ dir: './data/tests', cache: true })
-  await expect(store.ready).resolves.toBeUndefined()
-  expect(load).toBeCalled()
+it('2nd init', async () => {
+  new Store()
+  await expect(readdir('./data')).resolves.toHaveLength(1)
 })
 
-it('', async () => {
-  const store = new Store({ dir: './data/tests' })
-  await expect(store.ready).resolves.toBeUndefined()
-  await expect(store.add({})).resolves.toStrictEqual({
-    id: expect.any(String),
-    date: expect.any(Date),
-  })
+it('switch index file', async () => {
+  const store = new Store()
+  store.current.maxSize = 1
+  await expect(readdir('./data')).resolves.toHaveLength(1)
+  const id = await store.add({})
+  expect(id).toMatch(/^[\w-]+$/)
+  const items = await store.filter(() => true)
+  expect(items).toHaveLength(2)
+  expect(items).toContainEqual(expect.objectContaining({ id }))
+  const item = await store.get(id)
+  expect(item).toMatchObject({ id })
+  await expect(readdir('./data')).resolves.toHaveLength(2)
 })
