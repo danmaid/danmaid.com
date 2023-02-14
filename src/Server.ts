@@ -11,8 +11,9 @@ export class Server extends http.Server {
     'chrome-extension://hmamcnlhilpmomdgjkmeghcfcddgdkop',
   ]
 
-  constructor(public app = express()) {
+  constructor(public app = express(), options?: { dir?: string }) {
     super(app)
+    Object.assign(this, options)
     mkdirSync(this.dir, { recursive: true })
     app.use(cors({ origin: this.origins }))
     app.use(express.static(this.dir, { extensions: ['json'], index: ['index.json'] }))
@@ -66,9 +67,6 @@ export class Server extends http.Server {
         }
       }
       res.sendStatus(200)
-    })
-    app.get('*', (req, res, next) => {
-      res.json([])
     })
   }
 
