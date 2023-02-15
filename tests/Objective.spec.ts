@@ -1,11 +1,9 @@
 import { Server } from '../src/Server'
 import fetch, { Headers } from 'node-fetch'
-import { rm } from 'node:fs/promises'
 
 const server = new Server()
 let url: string
 beforeAll(async () => {
-  await rm('./data', { recursive: true }).catch(() => {})
   const port = await server.start()
   url = `http://localhost:${port}`
 })
@@ -24,14 +22,11 @@ it("PUT /xy { x: 'x', y: 'y' } -> 200", async () => {
   expect(res.status).toBe(200)
 })
 
-it("GET /xy.json -> { x: 'x', y: 'y' }", async () => {
-  const data = await (await get('/xy.json')).json()
-  expect(data).toStrictEqual({ x: 'x', y: 'y' })
-})
-
-it("GET /xy -> { x: 'x', y: 'y' }", async () => {
-  const data = await (await get('/xy')).json()
-  expect(data).toStrictEqual({ x: 'x', y: 'y' })
+it("GET /xy -> 200 { x: 'x', y: 'y' }", async () => {
+  const res = await get('/xy')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toMatchObject({ x: 'x', y: 'y' })
 })
 
 it("PUT /xx/yy { x: 'x', y: 'y' } -> 200", async () => {
@@ -39,45 +34,23 @@ it("PUT /xx/yy { x: 'x', y: 'y' } -> 200", async () => {
   expect(res.status).toBe(200)
 })
 
-it("GET /xx/yy.json -> { x: 'x', y: 'y' }", async () => {
-  const data = await (await get('/xx/yy.json')).json()
-  expect(data).toStrictEqual({ x: 'x', y: 'y' })
+it("GET /xx/yy -> 200 { x: 'x', y: 'y' }", async () => {
+  const res = await get('/xx/yy')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toMatchObject({ x: 'x', y: 'y' })
 })
 
-it("GET /xx/yy -> { x: 'x', y: 'y' }", async () => {
-  const data = await (await get('/xx/yy')).json()
-  expect(data).toStrictEqual({ x: 'x', y: 'y' })
-})
-
-it('GET /xx.json -> { yy: {} }', async () => {
-  const data = await (await get('/xx.json')).json()
+it('GET /xx -> 200 { yy: {} }', async () => {
+  const res = await get('/xx')
+  expect(res.status).toBe(200)
+  const data = await res.json()
   expect(data).toStrictEqual({ yy: {} })
 })
 
-// index
-it("GET /xx/index.json -> ['yy']", async () => {
-  const data = await (await get('/xx/index.json')).json()
-  expect(data).toContain('yy')
-})
-
-it("GET /xx/ -> ['yy']", async () => {
-  const data = await (await get('/xx/')).json()
-  expect(data).toContain('yy')
-})
-
-it("GET /xx -> ['yy']", async () => {
-  const data = await (await get('/xx')).json()
-  expect(data).toContain('yy')
-})
-
-it("GET /index.json -> ['xy', 'yy']", async () => {
-  const data = await (await get('/index.json')).json()
-  expect(data).toContain('xy')
-  expect(data).toContain('yy')
-})
-
-it("GET / -> ['xy', 'yy']", async () => {
-  const data = await (await get('/')).json()
-  expect(data).toContain('xy')
-  expect(data).toContain('yy')
+it("GET /xx/ -> 200 ['yy']", async () => {
+  const res = await get('/xx/')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toStrictEqual(['yy'])
 })

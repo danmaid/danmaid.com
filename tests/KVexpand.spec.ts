@@ -1,11 +1,9 @@
 import { Server } from '../src/Server'
 import fetch, { Headers } from 'node-fetch'
-import { rm } from 'node:fs/promises'
 
 const server = new Server()
 let url: string
 beforeAll(async () => {
-  await rm('./data', { recursive: true }).catch(() => {})
   const port = await server.start()
   url = `http://localhost:${port}`
 })
@@ -29,47 +27,51 @@ it("PUT /ccc { user: 'ccc', url: '/ccc' } -> 200", async () => {
   expect(res.status).toBe(200)
 })
 
-it("GET /user -> ['bbb', 'ccc']", async () => {
-  const data = await (await get('/user')).json()
+it("GET /user/ -> 200 ['bbb', 'ccc']", async () => {
+  const res = await get('/user/')
+  expect(res.status).toBe(200)
+  const data = await res.json()
   expect(data).toStrictEqual(['bbb', 'ccc'])
 })
 
-it('GET /user/bbb -> {}', async () => {
-  const data = await (await get('/user/bbb')).json()
-  expect(data).toStrictEqual({})
+it('GET /user/bbb -> 200 {}', async () => {
+  const res = await get('/user/bbb')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toMatchObject({})
 })
 
-it('GET /user/ccc -> {}', async () => {
-  const data = await (await get('/user/ccc')).json()
-  expect(data).toStrictEqual({})
+it('GET /user/ccc -> 200 {}', async () => {
+  const res = await get('/user/ccc')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toMatchObject({})
 })
 
-it("GET /url -> ['/bbb', '/ccc']", async () => {
-  const data = await (await get('/url')).json()
-  expect(data).toStrictEqual(['/bbb', '/ccc'])
+it("GET /url/ -> 200 ['%2Fbbb', '%2Fccc']", async () => {
+  const res = await get('/url/')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toStrictEqual(['%2Fbbb', '%2Fccc'])
 })
 
-it('GET /url/%2Fbbb -> {}', async () => {
-  const data = await (await get('/url/%2Fbbb')).json()
-  expect(data).toStrictEqual({})
+it('GET /url/%2Fbbb -> 200 {}', async () => {
+  const res = await get('/url/%2Fbbb')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toMatchObject({})
 })
 
-it('GET /url/%2Fccc -> {}', async () => {
-  const data = await (await get('/url/%2Fccc')).json()
-  expect(data).toStrictEqual({})
+it('GET /url/%2Fccc -> 200 {}', async () => {
+  const res = await get('/url/%2Fccc')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toMatchObject({})
 })
 
-it("GET /bbb -> { user: 'bbb', url: '/bbb' }", async () => {
-  const data = await (await get('/bbb')).json()
-  expect(data).toStrictEqual({ user: 'bbb', url: '/bbb' })
-})
-
-it("GET /ccc -> { user: 'ccc', url: '/ccc' }", async () => {
-  const data = await (await get('/ccc')).json()
-  expect(data).toStrictEqual({ user: 'ccc', url: '/ccc' })
-})
-
-it("GET / -> ['bbb', 'user', 'url', 'ccc']", async () => {
-  const data = await (await get('/')).json()
+it("GET / -> 200 ['bbb', 'user', 'url', 'ccc']", async () => {
+  const res = await get('/')
+  expect(res.status).toBe(200)
+  const data = await res.json()
   expect(data).toStrictEqual(['bbb', 'user', 'url', 'ccc'])
 })

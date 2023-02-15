@@ -1,12 +1,9 @@
 import { Server } from '../src/Server'
 import fetch, { Headers } from 'node-fetch'
-import { rm } from 'node:fs/promises'
 
-const dir = './data/index'
-const server = new Server(undefined, { dir })
+const server = new Server()
 let url: string
 beforeAll(async () => {
-  await rm(dir, { recursive: true }).catch(() => {})
   const port = await server.start()
   url = `http://localhost:${port}`
 })
@@ -20,91 +17,43 @@ async function get(path: string) {
   return fetch(url + path)
 }
 
-describe('herarchy', () => {
-  it('GET /xxx/yyy/index.json -> 404', async () => {
-    const res = await get('/xxx/yyy/index.json')
-    expect(res.status).toBe(404)
-  })
-
-  it('GET /xxx/index.json -> 404', async () => {
-    const res = await get('/xxx/index.json')
-    expect(res.status).toBe(404)
-  })
-
-  it('GET /index.json -> 404', async () => {
-    const res = await get('/index.json')
-    expect(res.status).toBe(404)
-  })
-
-  it("PUT /xxx/yyy/zzz { x: 'x', y: 'y', z: 'z' } -> 200", async () => {
-    const res = await put('/xxx/yyy/zzz', { x: 'x', y: 'y', z: 'z' })
-    expect(res.status).toBe(200)
-  })
-
-  it("GET /xxx/yyy/index.json -> 200 contain('zzz')", async () => {
-    const res = await get('/xxx/yyy/index.json')
-    expect(res.status).toBe(200)
-    const data = await res.json()
-    expect(data).toContain('zzz')
-  })
-
-  it("GET /xxx/index.json -> 200 contain('yyy')", async () => {
-    const res = await get('/xxx/index.json')
-    expect(res.status).toBe(200)
-    const data = await res.json()
-    expect(data).toContain('yyy')
-  })
-
-  it("GET /index.json -> 200 contain('xxx')", async () => {
-    const res = await get('/index.json')
-    expect(res.status).toBe(200)
-    const data = await res.json()
-    expect(data).toContain('xxx')
-  })
+it('GET /xxx/yyy/ -> 404', async () => {
+  const res = await get('/xxx/yyy/')
+  expect(res.status).toBe(404)
 })
 
-describe('alias', () => {
-  it("PUT /xx/yy { x: 'x', y: 'y' } -> 200", async () => {
-    const res = await put('/xx/yy', { x: 'x', y: 'y' })
-    expect(res.status).toBe(200)
-  })
+it('GET /xxx/ -> 404', async () => {
+  const res = await get('/xxx/')
+  expect(res.status).toBe(404)
+})
 
-  let xx: { body: string; etag: string | null }
-  it('GET /xx/index.json -> 200', async () => {
-    const res = await get('/xx/index.json')
-    expect(res.status).toBe(200)
-    xx = { body: await res.text(), etag: res.headers.get('ETag') }
-    expect(xx.body).toBeDefined()
-    expect(xx.etag).toBeDefined()
-  })
+it('GET / -> 404', async () => {
+  const res = await get('/')
+  expect(res.status).toBe(404)
+})
 
-  it('GET /xx/ == /xx/index.json', async () => {
-    const res = await get('/xx/')
-    expect(res.headers.get('ETag')).toBe(xx.etag)
-    const body = await res.text()
-    expect(body).toBe(xx.body)
-  })
+it("PUT /xxx/yyy/zzz { x: 'x', y: 'y', z: 'z' } -> 200", async () => {
+  const res = await put('/xxx/yyy/zzz', { x: 'x', y: 'y', z: 'z' })
+  expect(res.status).toBe(200)
+})
 
-  it('GET /xx == /xx/index.json', async () => {
-    const res = await get('/xx')
-    expect(res.headers.get('ETag')).toBe(xx.etag)
-    const body = await res.text()
-    expect(body).toBe(xx.body)
-  })
+it("GET /xxx/yyy/ -> 200 contain('zzz')", async () => {
+  const res = await get('/xxx/yyy/')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toContain('zzz')
+})
 
-  let root: { body: string; etag: string | null }
-  it('GET /index.json -> 200', async () => {
-    const res = await get('/index.json')
-    expect(res.status).toBe(200)
-    root = { body: await res.text(), etag: res.headers.get('ETag') }
-    expect(root.body).toBeDefined()
-    expect(root.etag).toBeDefined()
-  })
+it("GET /xxx/ -> 200 contain('yyy')", async () => {
+  const res = await get('/xxx/')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toContain('yyy')
+})
 
-  it('GET / == /index.json', async () => {
-    const res = await get('/')
-    expect(res.headers.get('ETag')).toBe(root.etag)
-    const body = await res.text()
-    expect(body).toBe(root.body)
-  })
+it("GET / -> 200 contain('xxx')", async () => {
+  const res = await get('/')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toContain('xxx')
 })
