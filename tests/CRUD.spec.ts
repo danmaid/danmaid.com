@@ -16,6 +16,12 @@ async function post(path: string, payload: unknown) {
 async function put(path: string, payload: unknown) {
   return fetch(url + path, { method: 'PUT', headers, body: JSON.stringify(payload) })
 }
+async function patch(path: string, payload: unknown) {
+  return fetch(url + path, { method: 'PATCH', headers, body: JSON.stringify(payload) })
+}
+async function del(path: string) {
+  return fetch(url + path, { method: 'DELETE', headers })
+}
 async function get(path: string) {
   return fetch(url + path)
 }
@@ -43,15 +49,46 @@ it("GET / -> 200 contain('xxx')", async () => {
   expect(data).toContain(id)
 })
 
-it.todo("PUT /xxx { x: 'xx', z: 'z', a: 'a' } -> 200")
-it.todo("GET /xxx -> 200 { x: 'xx', z: 'z', a: 'a' }")
-it.todo("GET / -> 200 ['xxx', 'x', 'z', 'a']")
-it.todo("PATCH /xxx { z: 'zz', b: 'b' } -> 200")
-it.todo("GET /xxx -> 200 { x: 'xx', z: 'zz', a: 'a', b: 'b' }")
-it.todo("GET / -> 200 ['xxx', 'x', 'z', 'a', 'b']")
-it.todo('DELETE /xxx -> 200')
-it.todo('GET /xxx -> 404')
-it.todo('GET / -> 200 []')
+it("PUT /xxx { x: 'xx', z: 'z', a: 'a' } -> 200", async () => {
+  const res = await put(`/${id}`, { x: 'xx', z: 'z', a: 'a' })
+  expect(res.status).toBe(200)
+})
+
+it("GET /xxx -> 200 { x: 'xx', z: 'z', a: 'a' }", async () => {
+  const res = await get(`/${id}`)
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toMatchObject({ x: 'xx', z: 'z', a: 'a' })
+})
+
+it("PATCH /xxx { z: 'zz', b: 'b' } -> 200", async () => {
+  const res = await patch(`/${id}`, { z: 'zz', b: 'b' })
+  expect(res.status).toBe(200)
+})
+
+it("GET /xxx -> 200 { x: 'xx', z: 'zz', a: 'a', b: 'b' }", async () => {
+  const res = await get(`/${id}`)
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toMatchObject({ x: 'xx', z: 'zz', a: 'a', b: 'b' })
+})
+
+it('DELETE /xxx -> 200', async () => {
+  const res = await del(`/${id}`)
+  expect(res.status).toBe(200)
+})
+
+it('GET /xxx -> 404', async () => {
+  const res = await get(`/${id}`)
+  expect(res.status).toBe(404)
+})
+
+it('GET / -> 200 not.contain(id)', async () => {
+  const res = await get('/')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).not.toContain(id)
+})
 
 it.todo("PUT /yyy { x: 'x', y: 'y', z: 'z' } -> 201")
 it.todo("GET / -> 200 ['yyy']")
