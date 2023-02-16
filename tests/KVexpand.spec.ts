@@ -17,14 +17,14 @@ async function get(path: string) {
   return fetch(url + path)
 }
 
-it("PUT /bbb { user: 'bbb', url: '/bbb' } -> 200", async () => {
+it("PUT /bbb { user: 'bbb', url: '/bbb' } -> 201", async () => {
   const res = await put('/bbb', { user: 'bbb', url: '/bbb' })
-  expect(res.status).toBe(200)
+  expect(res.status).toBe(201)
 })
 
-it("PUT /ccc { user: 'ccc', url: '/ccc' } -> 200", async () => {
+it("PUT /ccc { user: 'ccc', url: '/ccc' } -> 201", async () => {
   const res = await put('/ccc', { user: 'ccc', url: '/ccc' })
-  expect(res.status).toBe(200)
+  expect(res.status).toBe(201)
 })
 
 it("GET /user/ -> 200 ['bbb', 'ccc']", async () => {

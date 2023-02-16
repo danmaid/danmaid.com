@@ -90,5 +90,14 @@ it('GET / -> 200 not.contain(id)', async () => {
   expect(data).not.toContain(id)
 })
 
-it.todo("PUT /yyy { x: 'x', y: 'y', z: 'z' } -> 201")
-it.todo("GET / -> 200 ['yyy']")
+it("PUT /yyy { x: 'x', y: 'y', z: 'z' } -> 201", async () => {
+  const res = await put('/yyy', { x: 'x', y: 'y', z: 'z' })
+  expect(res.status).toBe(201)
+})
+
+it("GET / -> 200 ['yyy']", async () => {
+  const res = await get('/')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toContain('yyy')
+})

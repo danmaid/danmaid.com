@@ -32,9 +32,9 @@ it('GET / -> 404', async () => {
   expect(res.status).toBe(404)
 })
 
-it("PUT /xxx/yyy/zzz { x: 'x', y: 'y', z: 'z' } -> 200", async () => {
+it("PUT /xxx/yyy/zzz { x: 'x', y: 'y', z: 'z' } -> 201", async () => {
   const res = await put('/xxx/yyy/zzz', { x: 'x', y: 'y', z: 'z' })
-  expect(res.status).toBe(200)
+  expect(res.status).toBe(201)
 })
 
 it("GET /xxx/yyy/ -> 200 contain('zzz')", async () => {

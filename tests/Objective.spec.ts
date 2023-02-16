@@ -17,9 +17,9 @@ async function get(path: string) {
   return fetch(url + path)
 }
 
-it("PUT /xy { x: 'x', y: 'y' } -> 200", async () => {
+it("PUT /xy { x: 'x', y: 'y' } -> 201", async () => {
   const res = await put('/xy', { x: 'x', y: 'y' })
-  expect(res.status).toBe(200)
+  expect(res.status).toBe(201)
 })
 
 it("GET /xy -> 200 { x: 'x', y: 'y' }", async () => {
@@ -29,9 +29,9 @@ it("GET /xy -> 200 { x: 'x', y: 'y' }", async () => {
   expect(data).toMatchObject({ x: 'x', y: 'y' })
 })
 
-it("PUT /xx/yy { x: 'x', y: 'y' } -> 200", async () => {
+it("PUT /xx/yy { x: 'x', y: 'y' } -> 201", async () => {
   const res = await put('/xx/yy', { x: 'x', y: 'y' })
-  expect(res.status).toBe(200)
+  expect(res.status).toBe(201)
 })
 
 it("GET /xx/yy -> 200 { x: 'x', y: 'y' }", async () => {

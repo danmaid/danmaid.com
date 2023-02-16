@@ -33,6 +33,24 @@ export class Items<T = Record<string, unknown>> extends Map<string, T> {
     }
     return items
   }
+
+  revs = new Map<string, number>()
+
+  increment(key: string): number {
+    let rev = this.revs.get(key) || 0
+    this.revs.set(key, ++rev)
+    return rev
+  }
+
+  set(key: string, value: T): this {
+    this.increment(key)
+    return super.set(key, value)
+  }
+
+  delete(key: string): boolean {
+    this.increment(key)
+    return super.delete(key)
+  }
 }
 
 export class Server extends http.Server {
@@ -60,8 +78,10 @@ export class Server extends http.Server {
       res.status(201).json(id)
       next()
     })
-    app.put('*', async (req, res, next) => {
-      res.sendStatus(200)
+    app.put('*', async ({ path }, res, next) => {
+      const items = await Items.from(this.store, path)
+      const rev = items.revs.get(path)
+      rev && rev > 1 ? res.sendStatus(200) : res.sendStatus(201)
       next()
     })
     app.patch('*', async (req, res, next) => {
