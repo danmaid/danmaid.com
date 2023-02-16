@@ -15,41 +15,37 @@ export class Children extends Set<string> {
     }
     return children
   }
-  toJSON = () => Object.fromEntries(Array.from(this).map((v) => [v, {}]))
 }
 
 export class Items<T = Record<string, unknown>> extends Map<string, T> {
   static async from(store: EventStore, path: string): Promise<Items> {
+    const events = await Events.fromPath(store, path)
+    const items = new Items()
+    for (const event of events) {
+      const { method, path } = event
+      if (typeof path !== 'string') continue
+      if (method === 'DELETE') items.delete(path)
+      else if (method === 'PATCH') items.set(path, { ...items.get(path), ...event })
+      else if (method === 'PUT') items.set(path, event)
+      else if (method === 'POST') items.set(path, event)
+    }
+    return items
+  }
+}
+
+export class Events<T = Record<string, unknown>> extends Array<T> {
+  static async fromPath(store: EventStore, path: string): Promise<Events> {
     const events = await store.filter(
       (v): v is { path: string; method?: string } =>
         v.method !== 'GET' && typeof v.path === 'string' && v.path.startsWith(path)
     )
-    const items = new Items()
-    for (const event of events) {
-      if (event.method === 'DELETE') items.delete(event.path)
-      else if (event.method === 'PATCH') items.set(event.path, { ...items.get(event.path), ...event })
-      else if (event.method === 'PUT') items.set(event.path, event)
-      else if (event.method === 'POST') items.set(event.path, event)
-    }
-    return items
+    const revs = new Events()
+    revs.push(...events)
+    return revs
   }
 
-  revs = new Map<string, number>()
-
-  increment(key: string): number {
-    let rev = this.revs.get(key) || 0
-    this.revs.set(key, ++rev)
-    return rev
-  }
-
-  set(key: string, value: T): this {
-    this.increment(key)
-    return super.set(key, value)
-  }
-
-  delete(key: string): boolean {
-    this.increment(key)
-    return super.delete(key)
+  get last(): T | undefined {
+    return this[this.length - 2]
   }
 }
 
@@ -71,32 +67,27 @@ export class Server extends http.Server {
       res.status(202)
       next()
     })
-    app.post('*', async ({ body, path, method }, res, next) => {
+    app.post('*', async ({ body, path, method }, res) => {
       const id = uuid()
       const v = path.endsWith('/') ? `${path}${id}` : `${path}/${id}`
       await this.store.add({ ...body, method, path: v })
       res.status(201).json(id)
-      next()
+      await this.expand(body)
     })
-    app.put('*', async ({ path }, res, next) => {
-      const items = await Items.from(this.store, path)
-      const rev = items.revs.get(path)
-      rev && rev > 1 ? res.sendStatus(200) : res.sendStatus(201)
-      next()
+    app.put('*', async ({ path, body }, res) => {
+      const events = await Events.fromPath(this.store, path)
+      events.length > 1 ? res.sendStatus(200) : res.sendStatus(201)
+      await this.expand(body)
     })
-    app.patch('*', async (req, res, next) => {
+    app.patch('*', async ({ body }, res) => {
       res.sendStatus(200)
-      next()
+      await this.expand(body)
     })
-    app.use(async ({ body, method }, res, next) => {
-      if (!['POST', 'PUT', 'PATCH'].includes(method)) return next()
-      for (const [k, v] of Object.entries(body)) {
-        if (typeof v !== 'string') continue
-        const path = `/${k}/${encodeURIComponent(v)}`
-        await this.store.add({ method: 'PUT', path })
-      }
+    app.delete('*', async ({ path }, res) => {
+      res.sendStatus(200)
+      const events = await Events.fromPath(this.store, path)
+      if (events.last) await this.expand(events.last, 'DELETE')
     })
-    app.delete('*', async (req, res) => res.sendStatus(200))
     app.get(/.*\/$/, async ({ path }, res) => {
       const items = await Items.from(this.store, path)
       if (items.size < 1) return res.sendStatus(404)
@@ -104,11 +95,17 @@ export class Server extends http.Server {
     })
     app.get('*', async ({ path }, res) => {
       const items = await Items.from(this.store, path)
-      if (items.size < 1) return res.sendStatus(404)
       const exact = items.get(path)
-      if (exact) return res.status(200).json(exact)
-      res.status(200).json(Children.from(items, path + '/'))
+      exact ? res.status(200).json(exact) : res.sendStatus(404)
     })
+  }
+
+  async expand(item: Record<string, unknown>, method = 'PUT'): Promise<void> {
+    for (const [k, v] of Object.entries(item)) {
+      if (typeof v !== 'string') continue
+      const path = `/${k}/${encodeURIComponent(v)}`
+      await this.store.add({ method, path })
+    }
   }
 
   async start(port?: number): Promise<number> {

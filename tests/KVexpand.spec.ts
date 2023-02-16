@@ -3,10 +3,7 @@ import fetch, { Headers } from 'node-fetch'
 
 const server = new Server()
 let url: string
-beforeAll(async () => {
-  const port = await server.start()
-  url = `http://localhost:${port}`
-})
+beforeAll(async () => (url = `http://localhost:${await server.start()}`))
 afterAll(async () => await server.stop())
 
 const headers = new Headers({ 'Content-Type': 'application/json' })
@@ -16,22 +13,13 @@ async function put(path: string, payload: unknown) {
 async function get(path: string) {
   return fetch(url + path)
 }
+async function del(path: string) {
+  return fetch(url + path, { method: 'DELETE', headers })
+}
 
 it("PUT /bbb { user: 'bbb', url: '/bbb' } -> 201", async () => {
   const res = await put('/bbb', { user: 'bbb', url: '/bbb' })
   expect(res.status).toBe(201)
-})
-
-it("PUT /ccc { user: 'ccc', url: '/ccc' } -> 201", async () => {
-  const res = await put('/ccc', { user: 'ccc', url: '/ccc' })
-  expect(res.status).toBe(201)
-})
-
-it("GET /user/ -> 200 ['bbb', 'ccc']", async () => {
-  const res = await get('/user/')
-  expect(res.status).toBe(200)
-  const data = await res.json()
-  expect(data).toStrictEqual(['bbb', 'ccc'])
 })
 
 it('GET /user/bbb -> 200 {}', async () => {
@@ -41,20 +29,6 @@ it('GET /user/bbb -> 200 {}', async () => {
   expect(data).toMatchObject({})
 })
 
-it('GET /user/ccc -> 200 {}', async () => {
-  const res = await get('/user/ccc')
-  expect(res.status).toBe(200)
-  const data = await res.json()
-  expect(data).toMatchObject({})
-})
-
-it("GET /url/ -> 200 ['%2Fbbb', '%2Fccc']", async () => {
-  const res = await get('/url/')
-  expect(res.status).toBe(200)
-  const data = await res.json()
-  expect(data).toStrictEqual(['%2Fbbb', '%2Fccc'])
-})
-
 it('GET /url/%2Fbbb -> 200 {}', async () => {
   const res = await get('/url/%2Fbbb')
   expect(res.status).toBe(200)
@@ -62,16 +36,53 @@ it('GET /url/%2Fbbb -> 200 {}', async () => {
   expect(data).toMatchObject({})
 })
 
-it('GET /url/%2Fccc -> 200 {}', async () => {
-  const res = await get('/url/%2Fccc')
+it("GET /user/ -> 200 ['bbb']", async () => {
+  const res = await get('/user/')
   expect(res.status).toBe(200)
   const data = await res.json()
-  expect(data).toMatchObject({})
+  expect(data).toStrictEqual(['bbb'])
 })
 
-it("GET / -> 200 ['bbb', 'user', 'url', 'ccc']", async () => {
+it("GET /url/ -> 200 ['%2Fbbb']", async () => {
+  const res = await get('/url/')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toStrictEqual(['%2Fbbb'])
+})
+
+it("GET / -> 200 ['bbb', 'user', 'url']", async () => {
   const res = await get('/')
   expect(res.status).toBe(200)
   const data = await res.json()
-  expect(data).toStrictEqual(['bbb', 'user', 'url', 'ccc'])
+  expect(data).toStrictEqual(['bbb', 'user', 'url'])
+})
+
+it('DELETE /bbb -> 200', async () => {
+  const res = await del('/bbb')
+  expect(res.status).toBe(200)
+})
+
+it('GET /user/bbb -> 404', async () => {
+  const res = await get('/user/bbb')
+  expect(res.status).toBe(404)
+})
+
+it('GET /url/%2Fbbb -> 404', async () => {
+  const res = await get('/url/%2Fbbb')
+  expect(res.status).toBe(404)
+})
+
+it('GET /user/ -> 404', async () => {
+  const res = await get('/user/')
+  expect(res.status).toBe(404)
+})
+
+it('GET /url/ -> 404', async () => {
+  const res = await get('/url/')
+  expect(res.status).toBe(404)
+})
+
+it('GET / -> 404', async () => {
+  const res = await get('/')
+  expect(res.status).toBe(404)
 })

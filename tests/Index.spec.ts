@@ -3,10 +3,7 @@ import fetch, { Headers } from 'node-fetch'
 
 const server = new Server()
 let url: string
-beforeAll(async () => {
-  const port = await server.start()
-  url = `http://localhost:${port}`
-})
+beforeAll(async () => (url = `http://localhost:${await server.start()}`))
 afterAll(async () => await server.stop())
 
 const headers = new Headers({ 'Content-Type': 'application/json' })

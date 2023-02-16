@@ -3,10 +3,7 @@ import fetch, { Headers } from 'node-fetch'
 
 const server = new Server()
 let url: string
-beforeAll(async () => {
-  const port = await server.start()
-  url = `http://localhost:${port}`
-})
+beforeAll(async () => (url = `http://localhost:${await server.start()}`))
 afterAll(async () => await server.stop())
 
 const headers = new Headers({ 'Content-Type': 'application/json' })
@@ -39,13 +36,6 @@ it("GET /xx/yy -> 200 { x: 'x', y: 'y' }", async () => {
   expect(res.status).toBe(200)
   const data = await res.json()
   expect(data).toMatchObject({ x: 'x', y: 'y' })
-})
-
-it('GET /xx -> 200 { yy: {} }', async () => {
-  const res = await get('/xx')
-  expect(res.status).toBe(200)
-  const data = await res.json()
-  expect(data).toStrictEqual({ yy: {} })
 })
 
 it("GET /xx/ -> 200 ['yy']", async () => {
