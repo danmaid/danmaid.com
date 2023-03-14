@@ -72,21 +72,21 @@ export class Server extends http.Server {
       const v = path.endsWith('/') ? `${path}${id}` : `${path}/${id}`
       await this.store.add({ ...body, method, path: v })
       res.status(201).json(id)
-      await this.expand(body)
+      await this.expand(body, v)
     })
     app.put('*', async ({ path, body }, res) => {
       const events = await Events.fromPath(this.store, path)
       events.length > 1 ? res.sendStatus(200) : res.sendStatus(201)
-      await this.expand(body)
+      await this.expand(body, path)
     })
-    app.patch('*', async ({ body }, res) => {
+    app.patch('*', async ({ body, path }, res) => {
       res.sendStatus(200)
-      await this.expand(body)
+      await this.expand(body, path)
     })
     app.delete('*', async ({ path }, res) => {
       res.sendStatus(200)
       const events = await Events.fromPath(this.store, path)
-      if (events.last) await this.expand(events.last, 'DELETE')
+      if (events.last) await this.expand(events.last, path, 'DELETE')
     })
     app.get(/.*\/$/, async ({ path }, res) => {
       const items = await Items.from(this.store, path)
@@ -100,10 +100,10 @@ export class Server extends http.Server {
     })
   }
 
-  async expand(item: Record<string, unknown>, method = 'PUT'): Promise<void> {
+  async expand(item: Record<string, unknown>, ref: string, method = 'PUT'): Promise<void> {
     for (const [k, v] of Object.entries(item)) {
       if (typeof v !== 'string') continue
-      const path = `/${k}/${encodeURIComponent(v)}`
+      const path = `/${k}/${encodeURIComponent(v)}/refs/${ref}`
       await this.store.add({ method, path })
     }
   }

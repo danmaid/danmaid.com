@@ -22,8 +22,9 @@ export class Server extends http.Server {
   constructor(public app = express()) {
     super(app)
     app.use(cors({ origin }))
+    app.use(express.json())
     app.use(async (req, res, next) => {
-      const { method, path, headers, ip, ips } = req
+      const { method, path, headers, ip, ips, body } = req
       const hasContent = parseInt(headers['content-length'] || '')
       const event = await events.add({ ...headers, ip, ips, method, path }, hasContent ? req : undefined)
       res.setHeader('Event-ID', event.id)
