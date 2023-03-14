@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import { addEvent, Cache, Event, filterEvents } from './Event'
-import { kvFilter, limitOffset, pickFields, QueryParams } from './query'
+import { QueryFilter, QueryParams } from './QueryFilter'
 
 import { EventEmitter, on } from 'node:events'
 
@@ -44,12 +44,9 @@ app.get('*', async (req, res, next) => {
   }
 })
 app.get<null, unknown[], null, QueryParams>('*', async (req, res) => {
-  const { limit, offset, fields, sort, filter, ...kv } = req.query
-  const list = Array.from(eventCache)
-  const x = limitOffset(list, limit, offset)
-  const y = Object.keys(kv).length > 0 ? x.filter((v) => kvFilter(v, kv, filter)) : x
-  const z = fields ? y.map((v) => pickFields(v, fields)) : y
-  res.json(z)
+  const q = new QueryFilter(req.query)
+  const data = q.exec(Array.from(eventCache))
+  res.json(data)
 })
 
 async function start(port?: number): Promise<void> {
