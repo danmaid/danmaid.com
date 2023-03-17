@@ -9,7 +9,11 @@ export class Event implements Record<string, unknown> {
   date = new Date()
 
   constructor(init: Record<string, unknown>) {
-    Object.assign(this, init)
+    this.set(init)
+  }
+
+  set(value: Record<string, unknown>): this {
+    return Object.assign(this, value)
   }
 }
 

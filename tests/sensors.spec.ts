@@ -1,26 +1,20 @@
 import fetch from 'node-fetch'
-import { Server } from '../src'
-import { getUrl, startServer } from './utils'
+import { SimpleServer } from '../src/SimpleServer'
 
-const server = new Server()
-startServer(server)
-
+const server = new SimpleServer()
 let url: string
-beforeAll(async () => (url = getUrl(server.address())))
+beforeAll(async () => (url = `http://localhost:${await server.start()}`))
+afterAll(async () => await server.stop())
 
 const sensor = '810A0000'
 const event = { type: 'sensed', temperature: 25.6, humidity: 41.46, magnet: 'open' }
-it('POST /sensors/:id/events -> 200', async () => {
-  const res = await fetch(url + `/sensors/${sensor}/events`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      accept: 'application/json',
-    },
+it('PATCH /sensors/:id -> 200', async () => {
+  const res = await fetch(url + `/sensors/${sensor}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(event),
   })
   expect(res.status).toBe(200)
-  expect(res.ok).toBe(true)
 })
 
 it('GET /sensors/:id -> 200 sensor', async () => {

@@ -22,6 +22,11 @@ it("PUT /bbb { user: 'bbb', url: '/bbb' } -> 201", async () => {
   expect(res.status).toBe(201)
 })
 
+it("PUT /ccc { user: 'bbb', url: '/ccc' } -> 201", async () => {
+  const res = await put('/ccc', { user: 'bbb', url: '/ccc' })
+  expect(res.status).toBe(201)
+})
+
 it('GET /user/bbb -> 200 {}', async () => {
   const res = await get('/user/bbb')
   expect(res.status).toBe(200)
@@ -36,6 +41,13 @@ it('GET /url/%2Fbbb -> 200 {}', async () => {
   expect(data).toMatchObject({})
 })
 
+it('GET /url/%2Fccc -> 200 {}', async () => {
+  const res = await get('/url/%2Fccc')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toMatchObject({})
+})
+
 it("GET /user/ -> 200 ['bbb']", async () => {
   const res = await get('/user/')
   expect(res.status).toBe(200)
@@ -43,22 +55,60 @@ it("GET /user/ -> 200 ['bbb']", async () => {
   expect(data).toStrictEqual(['bbb'])
 })
 
-it("GET /url/ -> 200 ['%2Fbbb']", async () => {
+it("GET /url/ -> 200 ['%2Fbbb', '%2Fccc']", async () => {
   const res = await get('/url/')
   expect(res.status).toBe(200)
   const data = await res.json()
-  expect(data).toStrictEqual(['%2Fbbb'])
+  expect(data).toStrictEqual(['%2Fbbb', '%2Fccc'])
 })
 
-it("GET / -> 200 ['bbb', 'user', 'url']", async () => {
+it("GET / -> 200 ['bbb', 'user', 'url', 'ccc']", async () => {
   const res = await get('/')
   expect(res.status).toBe(200)
   const data = await res.json()
-  expect(data).toStrictEqual(['bbb', 'user', 'url'])
+  expect(data).toStrictEqual(['bbb', 'user', 'url', 'ccc'])
 })
 
 it('DELETE /bbb -> 200', async () => {
   const res = await del('/bbb')
+  expect(res.status).toBe(200)
+})
+
+it('GET /user/bbb -> 200 {}', async () => {
+  const res = await get('/user/bbb')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toStrictEqual({})
+})
+
+it('GET /url/%2Fbbb -> 404', async () => {
+  const res = await get('/url/%2Fbbb')
+  expect(res.status).toBe(404)
+})
+
+it("GET /user/ -> 200 ['bbb']", async () => {
+  const res = await get('/user/')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toStrictEqual(['bbb'])
+})
+
+it("GET /url/ -> 200 ['%2Fccc']", async () => {
+  const res = await get('/url/')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toStrictEqual(['%2Fccc'])
+})
+
+it("GET / -> 200 ['url']", async () => {
+  const res = await get('/')
+  expect(res.status).toBe(200)
+  const data = await res.json()
+  expect(data).toStrictEqual(['url'])
+})
+
+it('DELETE /ccc -> 200', async () => {
+  const res = await del('/ccc')
   expect(res.status).toBe(200)
 })
 
@@ -67,8 +117,8 @@ it('GET /user/bbb -> 404', async () => {
   expect(res.status).toBe(404)
 })
 
-it('GET /url/%2Fbbb -> 404', async () => {
-  const res = await get('/url/%2Fbbb')
+it('GET /url/%2Fccc -> 404', async () => {
+  const res = await get('/url/%2Fccc')
   expect(res.status).toBe(404)
 })
 
