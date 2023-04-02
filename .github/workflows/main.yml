@@ -21,6 +21,6 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::090737628813:role/github-s3-danmaid.com
           aws-region: us-west-2
-      - name: Copy /events to s3
+      - name: Sync /events
         run: |
-          aws s3 cp ./packages/events/dist/index.html s3://danmaid.com/events/
+          aws s3 sync ./packages/events/dist/ s3://danmaid.com/events/ --delete

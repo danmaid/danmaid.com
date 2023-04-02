@@ -1,24 +1,22 @@
 import './style.css'
-import typescriptLogo from './typescript.svg'
-import viteLogo from '/vite.svg'
-import { setupCounter } from './counter'
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-  <div>
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="${viteLogo}" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://www.typescriptlang.org/" target="_blank">
-      <img src="${typescriptLogo}" class="logo vanilla" alt="TypeScript logo" />
-    </a>
-    <h1>Vite + TypeScript</h1>
-    <div class="card">
-      <button id="counter" type="button"></button>
-    </div>
-    <p class="read-the-docs">
-      Click on the Vite and TypeScript logos to learn more
-    </p>
-  </div>
-`
+const items: HTMLElement[] = []
+const app = document.getElementById('app')
+const events = new EventSource('')
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+events.addEventListener('message', (ev) => {
+  const div = document.createElement('div')
+  div.textContent = ev.data
+  div.classList.add('add')
+  app?.append(div)
+  setTimeout(() => {
+    div.classList.add('added')
+    items.push(div)
+  }, 100)
+  while (items.length > 10) {
+    const item = items.shift()
+    if (!item) continue
+    item.ontransitionend = () => item.remove()
+    item.classList.add('remove')
+  }
+})

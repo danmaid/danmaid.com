@@ -3,53 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>
-      :root,
-      body {
-        height: 100%;
-        overflow: auto;
-        margin: 0;
-      }
-      #app {
-        overflow: hidden;
-      }
-      .add {
-        position: relative;
-        transition: 2s ease-out;
-        left: 100%;
-        opacity: 0;
-      }
-      .added {
-        left: 0;
-        opacity: 1;
-      }
-      .remove {
-        transition: 2s ease-in;
-        opacity: 0;
-      }
-    </style>
   </head>
   <body>
     <pre id="app"></pre>
-    <script>
-      const items = []
-      const app = document.getElementById('app')
-      const events = new EventSource('')
-      events.addEventListener('message', (ev) => {
-        const div = document.createElement('div')
-        div.textContent = ev.data
-        div.classList.add('add')
-        app.append(div)
-        setTimeout(() => {
-          div.classList.add('added')
-          items.push(div)
-        }, 100)
-        while (items.length > 10) {
-          const item = items.shift()
-          item.ontransitionend = () => item.remove()
-          item.classList.add('remove')
-        }
-      })
-    </script>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
