@@ -4,20 +4,23 @@ on:
     branches:
       - main
 permissions:
-      id-token: write
-      contents: read
+  id-token: write
+  contents: read
 jobs:
   S3Upload:
     runs-on: ubuntu-latest
     steps:
       - name: Git clone the repository
         uses: actions/checkout@v3
+      - name: build
+        run: |
+          npm ci
+          npm run build -w packages/events
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::090737628813:role/github-s3-danmaid.com
           aws-region: us-west-2
-      # Upload a file to AWS s3
-      - name:  Copy index.html to s3
+      - name: Copy /events to s3
         run: |
-          aws s3 cp ./index.html s3://danmaid.com/
+          aws s3 cp ./packages/events/dist/index.html s3://danmaid.com/events/
