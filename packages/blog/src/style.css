@@ -1,0 +1,48 @@
+:root {
+  background-color: #111;
+  color: #eee;
+  height: 100%;
+}
+header {
+  background-color: #fff1;
+}
+footer a {
+  color: unset;
+  text-decoration: unset;
+}
+footer {
+  background-color: #fff1;
+  text-align: right;
+}
+
+.full-height {
+  display: flex;
+  flex-flow: column;
+  margin: 0;
+  height: 100%;
+}
+.full-height .main {
+  flex: 1 1 100%;
+  margin: 8px;
+}
+.full-height header {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+}
+.full-height footer {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+}
+
+.side-bar {
+  display: flex;
+}
+.side-bar main {
+  background-color: coral;
+  flex: 1 1 100%;
+}
+.side-bar .side {
+  background-color: cornflowerblue;
+  flex: 0 0 20%;
+  margin-left: 8px;
+}
