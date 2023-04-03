@@ -16,6 +16,7 @@ jobs:
         run: |
           npm ci
           npm run build -w packages/events
+          npm run build -w packages/blog
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -24,3 +25,4 @@ jobs:
       - name: Sync /events
         run: |
           aws s3 sync ./packages/events/dist/ s3://danmaid.com/events/ --delete
+          aws s3 sync ./packages/blog/dist/ s3://danmaid.com/blog/ --delete
