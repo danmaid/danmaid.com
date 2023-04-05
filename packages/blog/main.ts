@@ -7,7 +7,7 @@ import { join, basename, dirname } from 'node:path'
 const src = './posts'
 const dist = './dist'
 
-await rm(dist, { recursive: true })
+await rm(dist, { recursive: true }).catch(() => {})
 await mkdir(dist)
 await copyRecursive(src, dist)
 
