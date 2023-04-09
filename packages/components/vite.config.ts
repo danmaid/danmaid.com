@@ -5,8 +5,8 @@ export default defineConfig({
   base: '',
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/dm-test.ts'),
-      fileName: 'dm-test',
+      entry: resolve(__dirname, 'src/AWSV4Signature.ts'),
+      fileName: 'AWSV4Signature',
       formats: ['es'],
     },
   },
