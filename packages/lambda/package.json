@@ -1,0 +1,29 @@
+{
+  "name": "lambda",
+  "version": "0.0.1",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "devDependencies": {
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.310.0",
+    "@aws-sdk/client-dynamodb": "^3.310.0",
+    "@aws-sdk/lib-dynamodb": "^3.310.0",
+    "@tsconfig/node18": "^1.0.1",
+    "@types/aws-lambda": "^8.10.114",
+    "typescript": "^5.0.4"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danmaid/danmaid.com.git"
+  },
+  "author": "danmaid",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/danmaid/danmaid.com/issues"
+  },
+  "homepage": "https://github.com/danmaid/danmaid.com#readme"
+}
