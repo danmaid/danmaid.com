@@ -3,7 +3,7 @@ WORKDIR /usr/local/app
 COPY package.json index.html tsconfig.json vite.config.ts tsconfig.lib.json ./
 RUN npm install
 COPY src/ ./src/
-COPY public/ ./public/
+ADD public/ ./public/
 RUN npm run build
 RUN npm run build:lib
 RUN npm ci --omit=dev
