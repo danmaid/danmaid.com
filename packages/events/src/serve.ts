@@ -5,10 +5,10 @@ import { Socket } from 'node:net'
 
 const app = express()
 app.use(morgan('combined'))
-app.use(middleware())
-app.use(express.static('dist'))
+app.use('/events', middleware())
+app.use('/events', express.static('dist'))
 
-const server = app.listen(3000, () => console.log('http://localhost:3000'))
+const server = app.listen(3000, () => console.log('http://localhost:3000/events'))
 const connections = new Set<Socket>()
 server.on('connection', (socket) => {
   connections.add(socket)

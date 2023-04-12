@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import { resolve } from 'node:path'
 
 export default defineConfig({
-  base: '',
+  base: '/events',
   // build: {
   //   lib: {
   //     entry: resolve(__dirname, 'src/dm-test.ts'),
