@@ -1,0 +1,16 @@
+name: tag to release
+on:
+  push:
+    tags:
+      - '*'
+jobs:
+  BuildAndRelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: build and pack
+        run: zip -r release.zip public
+      - name: create release
+        run: gh release create $GITHUB_REF_NAME release.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
