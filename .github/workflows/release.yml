@@ -11,8 +11,8 @@ jobs:
       - name: build and pack
         run: |
           cd public
-          zip -r ../danmaid.com.$GITHUB_REF_NAME.zip .
+          zip -r ../danmaid.com.zip .
       - name: create release
-        run: gh release create $GITHUB_REF_NAME danmaid.com.$GITHUB_REF_NAME.zip
+        run: gh release create $GITHUB_REF_NAME danmaid.com.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
