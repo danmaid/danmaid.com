@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: build and pack
-        run: zip -r danmaid.com.$GITHUB_REF_NAME.zip public
+        run: zip -r danmaid.com.$GITHUB_REF_NAME.zip public/*
       - name: create release
         run: gh release create $GITHUB_REF_NAME danmaid.com.$GITHUB_REF_NAME.zip
         env:
