@@ -4,7 +4,7 @@ on:
     branches:
       - main
     paths:
-      - packages/sync/**
+      - packages/sync-tool/**
 jobs:
   PushDockerHub:
     runs-on: ubuntu-latest
