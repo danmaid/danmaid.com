@@ -16,7 +16,7 @@ jobs:
       - name: create release
         run: gh release create release.zip
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   S3Upload:
     runs-on: ubuntu-latest
