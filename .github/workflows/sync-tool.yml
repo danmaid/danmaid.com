@@ -5,6 +5,7 @@ on:
       - main
     paths:
       - packages/sync-tool/**
+      - .github/workflows/sync-tool.yml
 jobs:
   PushDockerHub:
     runs-on: ubuntu-latest
