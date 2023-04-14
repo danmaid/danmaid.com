@@ -1,5 +1,6 @@
-FROM alpine
+FROM debian
 WORKDIR ~
-RUN apk add rsync
+RUN apt update
+RUN apt install -y rsync
 COPY sync.sh ./
 CMD ["./sync.sh"]
