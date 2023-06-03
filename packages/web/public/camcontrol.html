@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Live Camera Controller</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="matrix-code.js"></script>
+    <style>
+      :root {
+        background-color: #000;
+        color: #eee;
+      }
+    </style>
+  </head>
+  <body style="height: 100vh; margin: 0; padding: 8px; box-sizing: border-box">
+    <button id="start">start</button>
+    <button id="stop">stop</button>
+
+    <script>
+      const start = document.getElementById('start')
+      start.onclick = () => {
+        fetch('/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ video: true }),
+        })
+      }
+
+      const stop = document.getElementById('stop')
+      stop.onclick = () => {
+        fetch('/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ video: false }),
+        })
+      }
+    </script>
+
+    <dm-matrix-code
+      src="/"
+      style="position: fixed; top: 0; left: 0; bottom: 0; right: 0; z-index: -999"
+    ></dm-matrix-code>
+  </body>
+</html>
