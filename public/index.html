@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -8,5 +8,124 @@
     <link rel="stylesheet" type="text/css" media="screen" href="main.css" />
     <script src="main.js"></script>
   </head>
-  <body></body>
+  <body>
+    <button onclick="load()">click</button>
+    <select id="select"></select>
+    <hr />
+    <canvas id="canvas" width="2000" height="500"></canvas>
+    <hr />
+
+    <script>
+      const select = document.getElementById('select')
+
+      async function load() {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+        select.innerHTML = ''
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        console.log(devices)
+        const map = new Map()
+        for (const device of devices) {
+          if (!device.deviceId) continue
+          if (!map.has(device.kind)) {
+            const optgroup = document.createElement('optgroup')
+            optgroup.label = device.kind
+            select.add(optgroup)
+            map.set(device.kind, optgroup)
+          }
+          const group = map.get(device.kind)
+          const option = document.createElement('option')
+          option.value = device.deviceId
+          option.text = device.label
+          group.append(option)
+        }
+      }
+
+      let audioCtx
+      let analyser
+      let source
+      const canvas = document.getElementById('canvas')
+      WIDTH = canvas.width
+      HEIGHT = canvas.height
+      const canvasCtx = canvas.getContext('2d')
+      canvasCtx.clearRect(0, 0, WIDTH, HEIGHT)
+
+      let bufferLength
+      // const dataArray = new Uint8Array(2048)
+
+      // const draw = function () {
+      //   drawVisual = requestAnimationFrame(draw)
+
+      //   analyser.getByteTimeDomainData(dataArray)
+      //   console.log(dataArray)
+
+      //   canvasCtx.fillStyle = 'rgb(200, 200, 200)'
+      //   canvasCtx.fillRect(0, 0, WIDTH, HEIGHT)
+
+      //   canvasCtx.lineWidth = 2
+      //   canvasCtx.strokeStyle = 'rgb(0, 0, 0)'
+
+      //   canvasCtx.beginPath()
+
+      //   const sliceWidth = (WIDTH * 1.0) / bufferLength
+      //   let x = 0
+
+      //   for (let i = 0; i < bufferLength; i++) {
+      //     let v = dataArray[i] / 128.0
+      //     let y = (v * HEIGHT) / 2
+
+      //     if (i === 0) {
+      //       canvasCtx.moveTo(x, y)
+      //     } else {
+      //       canvasCtx.lineTo(x, y)
+      //     }
+
+      //     x += sliceWidth
+      //   }
+
+      //   canvasCtx.lineTo(canvas.width, canvas.height / 2)
+      //   canvasCtx.stroke()
+      // }
+
+      // See comment above for Float32Array()
+      select.onchange = async (ev) => {
+        if (source) source.disconnect()
+        if (!audioCtx) audioCtx = new AudioContext()
+        if (!analyser) analyser = audioCtx.createAnalyser()
+        const media = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: select.value } })
+        console.log(media)
+        source = audioCtx.createMediaStreamSource(media)
+        source.connect(analyser)
+        analyser.fftSize = 32768
+        bufferLength = analyser.fftSize
+        const dataArrayAlt = new Uint8Array(bufferLength)
+
+        canvasCtx.clearRect(0, 0, WIDTH, HEIGHT)
+
+        const drawAlt = function () {
+          drawVisual = requestAnimationFrame(drawAlt)
+
+          analyser.getByteFrequencyData(dataArrayAlt)
+          console.log(dataArrayAlt.length)
+
+          canvasCtx.fillStyle = 'rgb(0, 0, 0)'
+          canvasCtx.fillRect(0, 0, WIDTH, HEIGHT)
+
+          const barWidth = (WIDTH / bufferLength) * 5
+          let barHeight
+          let x = 0
+
+          for (let i = 0; i < bufferLength; i++) {
+            barHeight = dataArrayAlt[i] * 4
+
+            canvasCtx.fillStyle = 'rgb(' + (barHeight + 100) + ',50,50)'
+            canvasCtx.fillRect(x, HEIGHT - barHeight / 2, barWidth, barHeight / 2)
+
+            x += barWidth + 1
+          }
+        }
+
+        drawAlt()
+      }
+    </script>
+  </body>
 </html>
