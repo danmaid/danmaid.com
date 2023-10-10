@@ -4,18 +4,30 @@
     <title>男メイド</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
+      :root {
+        --color-fg: #b6c0e2;
+        --color-fg-blur: #4762b8;
+      }
       :link {
-        color: #6464ff;
+        color: var(--color-fg);
       }
       :visited {
-        color: #6464ff;
+        color: var(--color-fg);
+      }
+      body {
+        background-color: #1a1a1a;
+        color: var(--color-fg);
+        filter: drop-shadow(0 1px 1px var(--color-fg-blur))
+          drop-shadow(1px 0 1px var(--color-fg-blur))
+          drop-shadow(0 -1px 1px var(--color-fg-blur))
+          drop-shadow(-1px 0 1px var(--color-fg-blur));
       }
       ul > * {
         display: list-item;
       }
     </style>
   </head>
-  <body style="background-color: #000; color: #eee">
+  <body>
     <ul>
       <a href="https://www.youtube.com/@danmaid"
         >https://www.youtube.com/@danmaid</a
