@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <title>男メイド</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="main.css" />
+    <style>
+      body {
+        filter: drop-shadow(0 1em 1em var(--color-fg-blur))
+          drop-shadow(1em 0 1em var(--color-fg-blur))
+          drop-shadow(0 -1em 1em var(--color-fg-blur))
+          drop-shadow(-1em 0 1em var(--color-fg-blur));
+      }
+    </style>
+  </head>
+  <body
+    style="
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    "
+  >
+    <div id="clock" style="font-size: 15vmax">と:け:い</div>
+
+    <script>
+      const f = Intl.DateTimeFormat(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+      setTimeout(() => {
+        setInterval(() => (clock.textContent = f.format(new Date())), 1000);
+      }, 1000 - new Date().getMilliseconds());
+    </script>
+  </body>
+</html>
