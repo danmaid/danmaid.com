@@ -8,81 +8,113 @@
       ul > * {
         display: list-item;
       }
+      #perspective {
+        perspective: 50px;
+        overflow: hidden;
+      }
+      #current {
+        transform-style: preserve-3d;
+        transition: 1s;
+      }
+      .zoomin #current {
+        transform: translateZ(50px);
+      }
     </style>
   </head>
   <body>
-    <ul>
-      <a href="https://www.youtube.com/@danmaid"
-        >https://www.youtube.com/@danmaid</a
-      >
-      <a href="https://github.com/danmaid/">https://github.com/danmaid/</a>
-      <a href="https://twitter.com/danmaid69">https://twitter.com/danmaid69</a>
-      <a href="https://www.facebook.com/danmaid69/"
-        >https://www.facebook.com/danmaid69/</a
-      >
-      <a href="https://www.instagram.com/danmaid/"
-        >https://www.instagram.com/danmaid/</a
-      >
-      <a href="https://mail.google.com/">https://mail.google.com/</a>
-      <a href="https://outlook.office365.com/"
-        >https://outlook.office365.com/</a
-      >
-      <a href="https://calendar.google.com/">https://calendar.google.com/</a>
-    </ul>
-    <fieldset>
-      <legend>仕様書を追加する</legend>
-      <ul>
-        <a href="https://github.com/danmaid/danmaid.com/issues/5"
-          >https://github.com/danmaid/danmaid.com/issues/5</a
-        >
-        <a href="https://playwright.dev/docs/intro"
-          >https://playwright.dev/docs/intro</a
-        >
-      </ul>
-    </fieldset>
-    <fieldset>
-      <legend>サイバー感の追加</legend>
-      <ul>
-        <a href="https://github.com/danmaid/danmaid.com/issues/4"
-          >https://github.com/danmaid/danmaid.com/issues/4</a
-        >
-        <a href="https://danmaid.github.io/">https://danmaid.github.io/</a>
-      </ul>
-    </fieldset>
-    <fieldset>
-      <legend>ページを公開する</legend>
-      <ul>
-        <a href="https://github.com/danmaid/danmaid.com/issues/3"
-          >https://github.com/danmaid/danmaid.com/issues/3</a
-        >
-        <a
-          href="https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site"
-          >https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site</a
-        >
-        <a
-          href="https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain"
-          >https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain</a
-        >
-        <a href="https://danmaid.github.io/danmaid.com/"
-          >https://danmaid.github.io/danmaid.com/</a
-        >
-        <a
-          href="https://us-east-1.console.aws.amazon.com/route53/v2/hostedzones?region=us-west-2#ListRecordSets/Z3OL5HR5Q6QI7M"
-          >https://us-east-1.console.aws.amazon.com/route53/v2/hostedzones?region=us-west-2#ListRecordSets/Z3OL5HR5Q6QI7M</a
-        >
-        <a
-          href="https://docs.github.com/ja/pages/configuring-a-custom-domain-for-your-github-pages-site/troubleshooting-custom-domains-and-github-pages#custom-domain-names-that-are-unsupported"
-          >https://docs.github.com/ja/pages/configuring-a-custom-domain-for-your-github-pages-site/troubleshooting-custom-domains-and-github-pages#custom-domain-names-that-are-unsupported</a
-        >
-        <a
-          href="https://docs.github.com/ja/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain"
-          >https://docs.github.com/ja/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain</a
-        >
-        <a
-          href="https://docs.github.com/ja/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain-and-the-www-subdomain-variant"
-          >https://docs.github.com/ja/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain-and-the-www-subdomain-variant</a
-        >
-      </ul>
-    </fieldset>
+    <div id="perspective">
+      <div id="current">
+        <ul>
+          <a id="clock" href="clock.html" class="zoom">とけい</a>
+        </ul>
+        <ul>
+          <a href="https://www.youtube.com/@danmaid"
+            >https://www.youtube.com/@danmaid</a
+          >
+          <a href="https://github.com/danmaid/">https://github.com/danmaid/</a>
+          <a href="https://twitter.com/danmaid69"
+            >https://twitter.com/danmaid69</a
+          >
+          <a href="https://www.facebook.com/danmaid69/"
+            >https://www.facebook.com/danmaid69/</a
+          >
+          <a href="https://www.instagram.com/danmaid/"
+            >https://www.instagram.com/danmaid/</a
+          >
+          <a href="https://mail.google.com/">https://mail.google.com/</a>
+          <a href="https://outlook.office365.com/"
+            >https://outlook.office365.com/</a
+          >
+          <a href="https://calendar.google.com/"
+            >https://calendar.google.com/</a
+          >
+        </ul>
+        <fieldset>
+          <legend>仕様書を追加する</legend>
+          <ul>
+            <a href="https://github.com/danmaid/danmaid.com/issues/5"
+              >https://github.com/danmaid/danmaid.com/issues/5</a
+            >
+            <a href="https://playwright.dev/docs/intro"
+              >https://playwright.dev/docs/intro</a
+            >
+          </ul>
+        </fieldset>
+        <fieldset>
+          <legend>サイバー感の追加</legend>
+          <ul>
+            <a href="https://github.com/danmaid/danmaid.com/issues/4"
+              >https://github.com/danmaid/danmaid.com/issues/4</a
+            >
+            <a href="https://danmaid.github.io/">https://danmaid.github.io/</a>
+          </ul>
+        </fieldset>
+        <fieldset>
+          <legend>ページを公開する</legend>
+          <ul>
+            <a href="https://github.com/danmaid/danmaid.com/issues/3"
+              >https://github.com/danmaid/danmaid.com/issues/3</a
+            >
+            <a
+              href="https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site"
+              >https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site</a
+            >
+            <a
+              href="https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain"
+              >https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain</a
+            >
+            <a href="https://danmaid.github.io/danmaid.com/"
+              >https://danmaid.github.io/danmaid.com/</a
+            >
+            <a
+              href="https://us-east-1.console.aws.amazon.com/route53/v2/hostedzones?region=us-west-2#ListRecordSets/Z3OL5HR5Q6QI7M"
+              >https://us-east-1.console.aws.amazon.com/route53/v2/hostedzones?region=us-west-2#ListRecordSets/Z3OL5HR5Q6QI7M</a
+            >
+            <a
+              href="https://docs.github.com/ja/pages/configuring-a-custom-domain-for-your-github-pages-site/troubleshooting-custom-domains-and-github-pages#custom-domain-names-that-are-unsupported"
+              >https://docs.github.com/ja/pages/configuring-a-custom-domain-for-your-github-pages-site/troubleshooting-custom-domains-and-github-pages#custom-domain-names-that-are-unsupported</a
+            >
+            <a
+              href="https://docs.github.com/ja/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain"
+              >https://docs.github.com/ja/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain</a
+            >
+            <a
+              href="https://docs.github.com/ja/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain-and-the-www-subdomain-variant"
+              >https://docs.github.com/ja/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain-and-the-www-subdomain-variant</a
+            >
+          </ul>
+        </fieldset>
+      </div>
+      <script>
+        const perspective = document.getElementById("perspective");
+        for (const a of document.getElementsByClassName("zoom")) {
+          a.addEventListener("click", (ev) => {
+            ev.preventDefault();
+            perspective.classList.add("zoomin");
+            setTimeout(() => (location.href = a.href), 1000);
+          });
+        }
+      </script>
+    </div>
   </body>
 </html>
