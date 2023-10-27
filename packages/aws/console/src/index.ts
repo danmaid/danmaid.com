@@ -3,6 +3,10 @@ import { createIDToken } from "./auth";
 import { assumeRole, getSigninToken } from "./aws";
 
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
+  console.log(event);
+  if (!event.requestContext.http.sourceIp.startsWith("2400:4052:2962:5e00")) {
+    return { statusCode: 401 };
+  }
   const token = await createIDToken();
   const result = await assumeRole(token);
   const { SigninToken } = await getSigninToken({
