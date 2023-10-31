@@ -6,7 +6,7 @@ services:
   front:
     image: nginx:stable
     volumes:
-      - www:/usr/share/nginx/html:ro
+      - contents:/usr/share/nginx/html:ro
       - certs:/etc/certs:ro
     ports:
       - 443:443
@@ -16,6 +16,7 @@ services:
     environment:
       - DOMAIN_NAME=${DOMAIN_NAME}
 
+  # docker compose run certbot
   certbot:
     profiles:
       - oneshot
@@ -26,6 +27,14 @@ services:
     ports:
       - 80:80
 
+  # docker compose run contents
+  contents:
+    profiles:
+      - oneshot
+    image: danmaid/sync-tool
+    volumes:
+      - contents:/mnt/danmaid.com
+
 volumes:
-  www:
+  contents:
   certs:
