@@ -1,0 +1,31 @@
+configs:
+  nginx:
+    file: nginx.conf
+
+services:
+  front:
+    image: nginx:stable
+    volumes:
+      - www:/usr/share/nginx/html:ro
+      - certs:/etc/certs:ro
+    ports:
+      - 443:443
+    configs:
+      - target: /etc/nginx/templates/default.conf.template
+        source: nginx
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME}
+
+  certbot:
+    profiles:
+      - oneshot
+    image: certbot/certbot
+    volumes:
+      - certs:/etc/letsencrypt
+    command: certonly --standalone --register-unsafely-without-email --agree-tos -d ${DOMAIN_NAME}
+    ports:
+      - 80:80
+
+volumes:
+  www:
+  certs:
