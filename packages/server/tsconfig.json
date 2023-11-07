@@ -1,1 +1,4 @@
-{ "extends": "@tsconfig/node-lts/tsconfig.json" }
+{
+  "extends": "@tsconfig/node-lts/tsconfig.json",
+  "compilerOptions": { "outDir": "lib" }
+}

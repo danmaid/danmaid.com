@@ -1,11 +1,20 @@
 import { randomUUID } from "node:crypto";
 import { fetch } from "./client";
+import EventSource from "eventsource";
 
-export class Manager<T> {
-  ids = new Map<T, string>();
+export class Manager<T extends object & { close?(): void }> {
+  items = new Map<T, string>();
   serializer;
+  ids = new Map<string, T>();
+  events: EventSource;
+
   constructor(public url: string, options?: { serializer?(item: T): unknown }) {
     this.serializer = options?.serializer;
+    this.events = new EventSource(url.endsWith("/") ? url : url + "/");
+    this.events.addEventListener("DELETE", (ev) => {
+      console.log("DELETE event:", ev.data);
+      this.ids.get(ev.data)?.close?.();
+    });
   }
 
   async add(item: T): Promise<string> {
@@ -15,7 +24,8 @@ export class Manager<T> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(this.serializer ? this.serializer(item) : item),
     });
-    this.ids.set(item, id);
+    this.items.set(item, id);
+    this.ids.set(id, item);
     console.log(`added`, res.statusCode, id);
     return id;
   }
@@ -28,11 +38,12 @@ export class Manager<T> {
       headers: { "Content-Type": "application/json" },
     });
     console.log(`deleted`, res.statusCode, id);
-    this.ids.delete(item);
+    this.items.delete(item);
+    this.ids.delete(id);
     return true;
   }
 
   getId(item: T): string | undefined {
-    return this.ids.get(item);
+    return this.items.get(item);
   }
 }
