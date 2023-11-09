@@ -25,19 +25,29 @@ export class Logger extends Console {
   }
 
   log(...args: Parameters<Console["log"]>): void {
-    this.logBuffer.push(format(...args) + "\n");
+    this.logBuffer.push(
+      new Date().toISOString() + " " + format(...args) + "\n"
+    );
   }
   debug(...args: Parameters<Console["debug"]>): void {
-    this.debugBuffer.push(format(...args) + "\n");
+    this.debugBuffer.push(
+      new Date().toISOString() + " " + format(...args) + "\n"
+    );
   }
   info(...args: Parameters<Console["info"]>): void {
-    this.infoBuffer.push(format(...args) + "\n");
+    this.infoBuffer.push(
+      new Date().toISOString() + " " + format(...args) + "\n"
+    );
   }
   warn(...args: Parameters<Console["warn"]>): void {
-    this.warnBuffer.push(format(...args) + "\n");
+    this.warnBuffer.push(
+      new Date().toISOString() + " " + format(...args) + "\n"
+    );
   }
   error(...args: Parameters<Console["error"]>): void {
-    this.errorBuffer.push(format(...args) + "\n");
+    this.errorBuffer.push(
+      new Date().toISOString() + " " + format(...args) + "\n"
+    );
   }
 
   close() {

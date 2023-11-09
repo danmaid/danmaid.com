@@ -1,12 +1,12 @@
-import "./maid";
+import { manage } from "./maid";
 import { Server } from "node:http";
 import express from "express";
-import { rm, readdir, readFile, writeFile, mkdir } from "node:fs/promises";
-import { join, basename, dirname } from "node:path";
+import { rm, writeFile, mkdir, readdir, rmdir } from "node:fs/promises";
+import { join, dirname } from "node:path";
 import sse, { cast } from "./sse";
 import { Server as WSS, createWebSocketStream } from "ws";
 import { createWriteStream } from "node:fs";
-import { manage } from "./maid";
+import { randomUUID } from "node:crypto";
 
 const server = new Server();
 server.on("connection", manage("connection"));
@@ -22,47 +22,40 @@ wss.on("connection", async (socket, req) => {
 
 const app = express();
 
-app.use(express.json());
 app.use(sse());
 
 app.put("*", async (req, res) => {
-  console.log("PUT", req.path);
-  if (!req.body) return res.sendStatus(400);
-  const path = join("data", req.path + ".json");
+  console.debug(">>PUT", req.path);
+  const path = join("data", req.path);
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, JSON.stringify(req.body), { encoding: "utf-8" });
+  await writeFile(path, req);
   res.sendStatus(200);
   cast(req.path, undefined, "PUT");
+  console.debug("<<PUT", req.path);
 });
 app.delete("*", async (req, res) => {
-  console.log("DELETE", req.path);
-  await rm(join("data", req.path + ".json"));
+  console.debug(">>DELETE", req.path);
+  const path = join("data", req.path);
+  await rm(path);
+  if ((await readdir(dirname(path))).length === 0) await rmdir(dirname(path));
   res.sendStatus(200);
   cast(req.path, undefined, "DELETE");
+  console.debug("<<DELETE", req.path);
 });
-app.get("*", async (req, res, next) => {
-  if (!req.path.endsWith("/") || !req.accepts().includes("application/json"))
-    return next();
-  const files = await readdir(join("data", req.path));
-  if (!req.query.include_docs)
-    return res.json(files.map((v) => basename(v, ".json")));
-  const mapped = files.map(async (file) => {
-    try {
-      const doc = await readFile(join("data", req.path, file), {
-        encoding: "utf-8",
-      });
-      return {
-        id: basename(file, ".json"),
-        doc: JSON.parse(doc),
-      };
-    } catch {}
-  });
-  res.json((await Promise.all(mapped)).filter((v) => !!v));
+app.post("*", async (req, res) => {
+  console.debug(">>POST", req.path, req.headers);
+  const id = randomUUID();
+  let path = [req.path, id].join(req.path.endsWith("/") ? "" : "/");
+  await mkdir(dirname(join("data", path)), { recursive: true });
+  await writeFile(join("data", path), req);
+  res.setHeader("Location", `${req.protocol}://${req.headers.host}${path}`);
+  res.sendStatus(201);
+  cast(path, undefined, "POST");
+  console.debug("<<POST", req.path, id);
 });
 
-app.use(express.static("data", { extensions: ["json"] }));
+app.use(express.static("data", { extensions: ["json"], index: "index.json" }));
 app.use(express.static("public"));
 server.on("request", app);
-
 
 server.listen(6900, () => console.log("listen. http://localhost:6900"));

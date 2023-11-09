@@ -14,12 +14,13 @@
             <td id="family"></td>
             <td id="address"></td>
             <td id="port"></td>
+            <td><button>close</button></td>
           </tr>
         </template>
       </tbody>
     </table>
     <script type="module">
-      const x = new EventSource('/')
+      const x = new EventSource("/");
     </script>
     <script type="module">
       const res = await fetch("?include_docs=true", {

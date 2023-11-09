@@ -1,7 +1,12 @@
 import { request } from "node:http";
 import { randomUUID } from "node:crypto";
-import type { IncomingMessage, RequestOptions, ClientRequest } from "node:http";
-import { Socket } from "node:net";
+import type {
+  IncomingMessage,
+  RequestOptions,
+  ClientRequest,
+  OutgoingHttpHeaders,
+} from "node:http";
+import type { Socket } from "node:net";
 
 const locals: Set<string> = new Set();
 const connecting: Set<Promise<unknown>> = new Set();
@@ -30,13 +35,40 @@ async function getConnection(req: ClientRequest): Promise<Socket> {
   return connection;
 }
 
+interface FetchOptions {
+  headers?: OutgoingHttpHeaders;
+}
+
+let defaults: FetchOptions | undefined;
+export function setDefaults(options: FetchOptions) {
+  defaults = options;
+}
+function getOptions(options: FetchOptions): FetchOptions {
+  if (!defaults) return options;
+  return {
+    ...options,
+    headers: { ...defaults.headers, ...options.headers },
+  };
+}
+
+let wait = Promise.resolve();
+export function setWait(promise: Promise<any>) {
+  wait = promise;
+}
+
 export function fetch(
   url: string,
   options: RequestOptions & { body?: string } = {}
-): Promise<IncomingMessage> {
+): Promise<
+  IncomingMessage & { text(): Promise<string>; json<T>(): Promise<T> }
+> {
   return new Promise(async (resolve) => {
+    await wait;
+    console.log("fetch", url);
     const requestId = randomUUID();
-    const req = request(url, options, resolve);
+    const req = request(url, getOptions(options), (res) =>
+      resolve(Object.assign(res, { text, json }))
+    );
     req.setHeader("Request-Id", requestId);
     if (options.body) req.write(options.body);
     req.end();
@@ -47,6 +79,17 @@ export function fetch(
     locals.add(connectionId);
     socket.once("close", () => locals.delete(connectionId));
   });
+}
+
+async function text(this: IncomingMessage): Promise<string> {
+  let data = "";
+  for await (const chunk of this) data += chunk;
+  return data;
+}
+
+async function json<T = any>(this: IncomingMessage): Promise<T> {
+  const string = await text.apply(this);
+  return JSON.parse(string);
 }
 
 export async function isLoopback(id: string): Promise<boolean>;
