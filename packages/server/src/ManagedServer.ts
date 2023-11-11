@@ -9,6 +9,7 @@ import { createLogWriter } from "./Logger";
 import { ListenOptions } from "net";
 import { Duplex } from "stream";
 import { randomUUID } from "node:crypto";
+import { open } from "node:fs/promises";
 
 // prettier-ignore
 export interface ManagedServer {
@@ -81,9 +82,75 @@ export class ManagedServer extends Server {
   constructor(options: ServerOptions, requestListener?: RequestListener);
   constructor(...args: any[]) {
     super(...args);
+    this.setAccessLog();
     if (this.manager) this.connect();
     else this.once("listening", () => this.connectSelf());
     this.on("sse", this.onsse);
+    this.on("connection", async (socket) => {
+      if (await isLoopback(socket)) return;
+      const connection = registerItem(this.manager + "/connections");
+      this.managed.set(socket, connection);
+    });
+    this.on("request", async (req, res) => {
+      this.logger.access(`[${req.method}]`, req.url);
+      if (!req.url) return console.error("invalid url", req.url);
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      // POST /servers
+      // POST /logs
+      // POST /connections
+      // POST /sessions
+      if (req.method === "POST") {
+        const id = randomUUID();
+        url.pathname += url.pathname.endsWith("/") ? id : `/${id}`;
+        res.setHeader("Location", url.href);
+        res.statusCode = 201;
+        return res.end();
+      }
+      // GET /connections
+      // GET /sessions
+      if (req.method === "GET") {
+        if (url.pathname === "/admin/") {
+          const contents = await open("public/admin.html");
+          res.setHeader("Content-Type", "text/html");
+          return contents.createReadStream().pipe(res);
+        }
+
+        const prefix = new RegExp(`^${url.href}/?([^/]+)`);
+        const ids = Array.from(
+          await Array.from(this.managed.values()).reduce(async (a, v) => {
+            const matched = (await v).match(prefix);
+            return matched ? (await a).add(matched[1]) : a;
+          }, Promise.resolve(new Set<string>()))
+        );
+        if (ids.length > 0) {
+          const body = JSON.stringify(ids);
+          res.setHeader("Content-Type", "application/json");
+          res.statusCode = 200;
+          res.write(body);
+          return res.end();
+        }
+      }
+      // DELETE /connections/:id
+      // DELETE /sessions/:id
+    });
+    this.wss.on("connection", (ws, req) => {
+      this.logger.access("[WebSocket]", req.url, ws.protocol);
+      this.emit("websocket", ws, req);
+    });
+
+    // this.prependListener("request", this.onsession);
+    // this.prependListener("request", async (req, res) => {
+    //   const requestDate = new Date();
+    //   await new Promise((r) => res.on("close", () => r(new Date())));
+    //   const h = req.socket.remoteAddress || "-";
+    //   const t = requestDate.toISOString();
+    //   const r = `${req.method} ${req.url} ${req.httpVersion}`;
+    //   const s = res.statusCode;
+    //   this.logger.access(`${h} ${t} "${r}" ${s}`);
+    // });
+  }
+
+  setAccessLog() {
     this.on("connection", async (socket) => {
       Object.assign(socket, {
         toString(this: typeof socket) {
@@ -94,6 +161,7 @@ export class ManagedServer extends Server {
       const hadError = await new Promise((r) => socket.on("close", r));
       this.logger.access(`[close] ${socket}`, hadError);
     });
+
     this.on("request", async (req, res) => {
       Object.assign(req, {
         toString(this: typeof req) {
@@ -122,59 +190,6 @@ export class ManagedServer extends Server {
       await Promise.all([closeReq, closeRes]);
       this.logger.access(`[close] ${session}`);
     });
-    this.on("request", async (req, res) => {
-      this.logger.access(`[${req.method}]`, req.url);
-      if (!req.url) return console.error("invalid url", req.url);
-      const url = new URL(req.url, `http://${req.headers.host}`);
-      // POST /servers
-      // POST /logs
-      // POST /connections
-      // POST /sessions
-      if (req.method === "POST") {
-        const id = randomUUID();
-        url.pathname += url.pathname.endsWith("/") ? id : `/${id}`;
-        res.setHeader("Location", url.href);
-        res.statusCode = 201;
-        return res.end();
-      }
-      // GET /connections
-      // GET /sessions
-      if (req.method === "GET") {
-        const prefix = new RegExp(`^${url.href}/?([^/]+)`);
-        const ids = Array.from(
-          await Array.from(this.managed.values()).reduce(async (a, v) => {
-            const matched = (await v).match(prefix);
-            return matched ? (await a).add(matched[1]) : a;
-          }, Promise.resolve(new Set<string>()))
-        );
-        if (ids.length < 1) {
-          res.statusCode = 404;
-          return res.end();
-        }
-        const body = JSON.stringify(ids);
-        res.setHeader("Content-Type", "application/json");
-        res.statusCode = 200;
-        res.write(body);
-        return res.end();
-      }
-      // DELETE /connections/:id
-      // DELETE /sessions/:id
-    });
-    this.wss.on("connection", (ws, req) => {
-      this.logger.access("[WebSocket]", req.url, ws.protocol);
-      this.emit("websocket", ws, req);
-    });
-
-    // this.prependListener("request", this.onsession);
-    // this.prependListener("request", async (req, res) => {
-    //   const requestDate = new Date();
-    //   await new Promise((r) => res.on("close", () => r(new Date())));
-    //   const h = req.socket.remoteAddress || "-";
-    //   const t = requestDate.toISOString();
-    //   const r = `${req.method} ${req.url} ${req.httpVersion}`;
-    //   const s = res.statusCode;
-    //   this.logger.access(`${h} ${t} "${r}" ${s}`);
-    // });
   }
 
   connectSelf() {
