@@ -1,60 +1,46 @@
 import { Console } from "node:console";
-import WebSocket, { createWebSocketStream } from "ws";
-import { PassThrough } from "node:stream";
+import { PassThrough, Writable } from "node:stream";
 import { format } from "node:util";
+import WebSocket, { createWebSocketStream } from "ws";
 
+export function createLogWriter(
+  out: Writable
+): Console["log"] & { stream: PassThrough; connect(url: string): void } {
+  const stream = new PassThrough();
+  stream.pipe(out);
+  const ws = new PassThrough();
+  stream.pipe(ws);
+
+  const writer = (...args: Parameters<Console["log"]>) => {
+    stream.push(new Date().toISOString() + " " + format(...args) + "\n");
+  };
+  writer.stream = new PassThrough();
+  writer.connect = (url: string) => {
+    ws.pipe(createWebSocketStream(new WebSocket(url.replace(/^http/, "ws"))));
+  };
+  return writer;
+}
+
+export type Connectable = keyof Pick<
+  Logger,
+  "log" | "debug" | "info" | "warn" | "error"
+>;
 export class Logger extends Console {
-  logBuffer = new PassThrough();
-  debugBuffer = new PassThrough();
-  infoBuffer = new PassThrough();
-  warnBuffer = new PassThrough();
-  errorBuffer = new PassThrough();
+  log = createLogWriter(process.stdout);
+  debug = createLogWriter(process.stdout);
+  info = createLogWriter(process.stdout);
+  warn = createLogWriter(process.stderr);
+  error = createLogWriter(process.stderr);
 
-  constructor(url: string) {
+  constructor() {
     super(process.stdout);
-    this.logBuffer.pipe(process.stdout);
-    this.logBuffer.pipe(createWebSocketStream(new WebSocket(`${url}/log`)));
-    this.debugBuffer.pipe(process.stdout);
-    this.debugBuffer.pipe(createWebSocketStream(new WebSocket(`${url}/debug`)));
-    this.infoBuffer.pipe(process.stdout);
-    this.infoBuffer.pipe(createWebSocketStream(new WebSocket(`${url}/info`)));
-    this.warnBuffer.pipe(process.stderr);
-    this.warnBuffer.pipe(createWebSocketStream(new WebSocket(`${url}/warn`)));
-    this.errorBuffer.pipe(process.stderr);
-    this.errorBuffer.pipe(createWebSocketStream(new WebSocket(`${url}/error`)));
   }
 
-  log(...args: Parameters<Console["log"]>): void {
-    this.logBuffer.push(
-      new Date().toISOString() + " " + format(...args) + "\n"
-    );
-  }
-  debug(...args: Parameters<Console["debug"]>): void {
-    this.debugBuffer.push(
-      new Date().toISOString() + " " + format(...args) + "\n"
-    );
-  }
-  info(...args: Parameters<Console["info"]>): void {
-    this.infoBuffer.push(
-      new Date().toISOString() + " " + format(...args) + "\n"
-    );
-  }
-  warn(...args: Parameters<Console["warn"]>): void {
-    this.warnBuffer.push(
-      new Date().toISOString() + " " + format(...args) + "\n"
-    );
-  }
-  error(...args: Parameters<Console["error"]>): void {
-    this.errorBuffer.push(
-      new Date().toISOString() + " " + format(...args) + "\n"
-    );
-  }
-
-  close() {
-    this.logBuffer.end();
-    this.debugBuffer.end();
-    this.infoBuffer.end();
-    this.warnBuffer.end();
-    this.errorBuffer.end();
+  destroy() {
+    this.log.stream.end();
+    this.debug.stream.end();
+    this.info.stream.end();
+    this.warn.stream.end();
+    this.error.stream.end();
   }
 }

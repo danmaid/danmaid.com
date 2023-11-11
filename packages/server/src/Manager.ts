@@ -17,11 +17,21 @@ export class Manager<T extends object & { close?(): void }> {
     });
   }
 
+  async createItem(): Promise<string> {
+    const res = await fetch(this.url, { method: "POST" });
+    if (res.statusCode !== 201) throw Error("status code !== 201");
+    if (!res.headers.location) throw Error("Location header not found.");
+    return res.headers.location;
+  }
+
   async add(item: T): Promise<string> {
-    const id = randomUUID();
-    const res = await fetch(`${this.url}/${id}`, {
+    const url = await this.createItem();
+    const res = await fetch(url, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Link": `<${url}>`,
+      },
       body: JSON.stringify(this.serializer ? this.serializer(item) : item),
     });
     this.items.set(item, id);

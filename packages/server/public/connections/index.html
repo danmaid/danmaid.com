@@ -20,10 +20,7 @@
       </tbody>
     </table>
     <script type="module">
-      const x = new EventSource("/");
-    </script>
-    <script type="module">
-      const res = await fetch("?include_docs=true", {
+      const res = await fetch("index.json", {
         headers: { accept: "application/json" },
       });
       const items = await res.json();

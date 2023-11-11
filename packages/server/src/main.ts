@@ -21,6 +21,7 @@ wss.on("connection", async (socket, req) => {
 });
 
 const app = express();
+app.use(express.static("public"));
 
 app.use(sse());
 
@@ -55,7 +56,7 @@ app.post("*", async (req, res) => {
 });
 
 app.use(express.static("data", { extensions: ["json"], index: "index.json" }));
-app.use(express.static("public"));
+
 server.on("request", app);
 
 server.listen(6900, () => console.log("listen. http://localhost:6900"));
