@@ -12,7 +12,9 @@ export function createLogWriter(
   stream.pipe(ws);
 
   const writer = (...args: Parameters<Console["log"]>) => {
-    stream.push(new Date().toISOString() + " " + format(...args) + "\n");
+    stream.push(
+      format(`${new Date().toISOString()} ${args.shift()}`, ...args) + "\n"
+    );
   };
   writer.stream = new PassThrough();
   writer.connect = (url: string) => {

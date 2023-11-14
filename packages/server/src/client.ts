@@ -62,13 +62,13 @@ export function fetch(
 ): Promise<
   IncomingMessage & { text(): Promise<string>; json<T>(): Promise<T> }
 > {
-  return new Promise(async (resolve) => {
+  return new Promise(async (resolve, reject) => {
     await wait;
     console.log("fetch", url);
     const requestId = randomUUID();
-    const req = request(url, getOptions(options), (res) =>
-      resolve(Object.assign(res, { text, json }))
-    );
+    const req = request(url, getOptions(options), (res) => {
+      resolve(Object.assign(res, { text, json }));
+    });
     req.setHeader("Request-Id", requestId);
     if (options.body) req.write(options.body);
     req.end();

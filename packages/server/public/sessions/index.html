@@ -10,17 +10,23 @@
   <table>
     <thead>
       <th>id</th>
-      <th>family</th>
-      <th>address</th>
-      <th>port</th>
+      <th>method</th>
+      <th>url</th>
+      <th>version</th>
+      <th>connection</th>
+      <th>status</th>
+      <th>reason</th>
     </thead>
     <tbody id="tbody">
       <template id="row">
         <tr>
           <td id="_id"></td>
-          <td id="family"></td>
-          <td id="address"></td>
-          <td id="port"></td>
+          <td id="method"></td>
+          <td id="url"></td>
+          <td id="version"></td>
+          <td id="connection"></td>
+          <td id="status"></td>
+          <td id="reason"></td>
           <td>
             <button id="close">close</button>
           </td>
@@ -47,9 +53,12 @@
       const res = await fetch(id);
       const item = await res.json();
       const row = document.getElementById(id);
-      row.querySelector("#family").textContent = item.family;
-      row.querySelector("#address").textContent = item.address;
-      row.querySelector("#port").textContent = item.port;
+      row.querySelector("#method").textContent = item.method;
+      row.querySelector("#url").textContent = item.url;
+      row.querySelector("#version").textContent = item.version;
+      row.querySelector("#connection").textContent = item.connection;
+      row.querySelector("#status").textContent = item.status;
+      row.querySelector("#reason").textContent = item.reason;
     }
 
     const res = await fetch("index.json");

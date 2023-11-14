@@ -2,28 +2,17 @@
 <html lang="ja">
 
 <head>
-  <title>connections</title>
+  <title>/</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 
 <body>
   <table>
-    <thead>
-      <th>id</th>
-      <th>family</th>
-      <th>address</th>
-      <th>port</th>
-    </thead>
     <tbody id="tbody">
       <template id="row">
         <tr>
           <td id="_id"></td>
-          <td id="family"></td>
-          <td id="address"></td>
-          <td id="port"></td>
-          <td>
-            <button id="close">close</button>
-          </td>
+          <td><a id="link">go</a></td>
         </tr>
       </template>
     </tbody>
@@ -36,20 +25,8 @@
       const row = template.content.cloneNode(true);
       row.firstElementChild.id = id;
       row.querySelector("#_id").textContent = id;
-      row.querySelector("#close").addEventListener("click", () => {
-        fetch(id, { method: "DELETE" });
-      });
+      row.querySelector('#link').href = id
       tbody.append(row);
-      get(id);
-    }
-
-    async function get(id) {
-      const res = await fetch(id);
-      const item = await res.json();
-      const row = document.getElementById(id);
-      row.querySelector("#family").textContent = item.family;
-      row.querySelector("#address").textContent = item.address;
-      row.querySelector("#port").textContent = item.port;
     }
 
     const res = await fetch("index.json");
@@ -61,7 +38,6 @@
       document.getElementById(ev.data)?.remove()
     );
     es.addEventListener("POST", async (ev) => add(ev.data));
-    es.addEventListener("PUT", async (ev) => get(ev.data));
   </script>
 </body>
 
