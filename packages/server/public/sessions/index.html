@@ -2,7 +2,7 @@
 <html lang="ja">
 
 <head>
-  <title>connections</title>
+  <title>sessions</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 
@@ -28,6 +28,7 @@
           <td id="status"></td>
           <td id="reason"></td>
           <td>
+            <button id="get">get</button>
             <button id="close">close</button>
           </td>
         </tr>
@@ -45,14 +46,16 @@
       row.querySelector("#close").addEventListener("click", () => {
         fetch(id, { method: "DELETE" });
       });
+      row.querySelector("#get").addEventListener("click", () => get(id));
       tbody.append(row);
-      get(id);
+      // get(id);
     }
 
     async function get(id) {
       const res = await fetch(id);
-      const item = await res.json();
       const row = document.getElementById(id);
+      if (res.status === 404) return row.remove()
+      const item = await res.json();
       row.querySelector("#method").textContent = item.method;
       row.querySelector("#url").textContent = item.url;
       row.querySelector("#version").textContent = item.version;
@@ -63,14 +66,17 @@
 
     const res = await fetch("index.json");
     const items = await res.json();
-    for (const id of items) add(id);
+    for (const id of items) {
+      add(id);
+      get(id)
+    }
 
     const es = new EventSource("");
     es.addEventListener("DELETE", (ev) =>
       document.getElementById(ev.data)?.remove()
     );
     es.addEventListener("POST", async (ev) => add(ev.data));
-    es.addEventListener("PUT", async (ev) => get(ev.data));
+    // es.addEventListener("PUT", async (ev) => get(ev.data));
   </script>
 </body>
 

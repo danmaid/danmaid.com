@@ -18,7 +18,9 @@ export class Manager<T extends Manageable> extends Map<string, T> {
   }
 
   async add(item: T, path = "") {
+    console.log(">>add");
     const res = await fetch(this.url + path, { method: "POST" });
+    console.log("fetched.");
     if (res.statusCode !== 201) throw Error("status code !== 201");
     const url = res.headers.location;
     if (!url) throw Error("Location header is not found.");
@@ -30,13 +32,20 @@ export class Manager<T extends Manageable> extends Map<string, T> {
       toJSON: (key: string) =>
         key ? id : toJSON ? toJSON.call(item, key) : item,
     });
-    fetch(url, { method: "PUT", body: JSON.stringify(item) });
+
+    const execs = new Set();
+    const exec = fetch(url, { method: "PUT", body: JSON.stringify(item) });
+    exec.finally(() => execs.delete(exec));
+    execs.add(exec);
 
     item.on("updated", () => {
-      fetch(url, { method: "PUT", body: JSON.stringify(item) });
+      const exec = fetch(url, { method: "PUT", body: JSON.stringify(item) });
+      exec.finally(() => execs.delete(exec));
+      execs.add(exec);
       console.log("[updated] %s %j", item, item);
     });
-    item.on("deleted", () => {
+    item.on("deleted", async () => {
+      await Promise.allSettled(execs);
       fetch(url, { method: "DELETE" });
       console.log("[deleted] %s %j", item, item);
     });

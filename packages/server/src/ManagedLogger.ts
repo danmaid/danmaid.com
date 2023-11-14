@@ -11,6 +11,7 @@ function createLogWriter(prefix = ""): Console["log"] & {
   destroy(): void;
 } {
   const stream = new PassThrough();
+  stream.pipe(process.stdout)
   const writer = (...args: Parameters<Console["log"]>) => {
     stream.push(format(`${prefix}${args.shift()}`, ...args) + "\n");
   };

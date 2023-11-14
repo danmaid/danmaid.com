@@ -1,12 +1,12 @@
 import { request } from "node:http";
 import { randomUUID } from "node:crypto";
-import type {
+import {
   IncomingMessage,
   RequestOptions,
   ClientRequest,
   OutgoingHttpHeaders,
 } from "node:http";
-import type { Socket } from "node:net";
+import { Socket } from "node:net";
 
 const locals: Set<string> = new Set();
 const connecting: Set<Promise<unknown>> = new Set();
@@ -92,9 +92,17 @@ async function json<T = any>(this: IncomingMessage): Promise<T> {
   return JSON.parse(string);
 }
 
-export async function isLoopback(id: string): Promise<boolean>;
+export async function isLoopback(req: IncomingMessage): Promise<boolean>;
 export async function isLoopback(socket: Socket): Promise<boolean>;
-export async function isLoopback(key: Socket | string): Promise<boolean> {
+export async function isLoopback(
+  key: Socket | IncomingMessage
+): Promise<boolean> {
   await Promise.all(connecting);
-  return locals.has(typeof key === "string" ? key : getRemoteAddr(key));
+  if (key instanceof Socket) return locals.has(getRemoteAddr(key));
+  if (key instanceof IncomingMessage) {
+    const id = key.headers["request-id"];
+    if (typeof id !== "string") return false;
+    return locals.has(id);
+  }
+  throw Error("not implemented.");
 }

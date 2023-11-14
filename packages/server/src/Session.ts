@@ -15,10 +15,11 @@ export class Session extends EventEmitter implements Manageable {
       }
       this.emit("updated");
     });
-    Promise.all([
-      new Promise((r) => req.on("close", r)),
-      new Promise((r) => res.on("close", r)),
-    ]).then(() => this.emit("deleted"));
+    res.on('close', () => this.emit('deleted'))
+    // Promise.all([
+    //   new Promise((r) => req.on("close", r)),
+    //   new Promise((r) => res.on("close", r)),
+    // ]).then(() => this.emit("deleted"));
   }
 
   toJSON() {

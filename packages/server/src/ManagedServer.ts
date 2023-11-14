@@ -1,8 +1,10 @@
-import { Server } from "node:http";
+import { Server, IncomingMessage } from "node:http";
 import { ManagedLogger } from "./ManagedLogger";
 import { Manager } from "./Manager";
 import { Connection } from "./Connection";
 import { Session } from "./Session";
+import { isLoopback } from "./client";
+import { Socket } from "node:net";
 
 export const console = new ManagedLogger();
 
@@ -29,15 +31,21 @@ export class ManagedServer extends Server {
 
   emit(event: string, ...args: any[]): boolean {
     if (event === "connection") {
-      this.manager
-        .add(new Connection(args[0]), "/connections/")
-        .then(() => super.emit("connection", ...args));
+      isLoopback(args[0]).then((v) => {
+        if (v) return super.emit(event, ...args);
+        this.manager
+          .add(new Connection(args[0]), "/connections/")
+          .then(() => super.emit(event, ...args));
+      });
       return !!this.listenerCount(event);
     }
     if (event === "request") {
-      this.manager
-        .add(new Session(args[0], args[1]), "/sessions/")
-        .then(() => super.emit("request", ...args));
+      isLoopback(args[0]).then((v) => {
+        if (v) return super.emit(event, ...args);
+        this.manager
+          .add(new Session(args[0], args[1]), "/sessions/")
+          .then(() => super.emit(event, ...args));
+      });
       return !!this.listenerCount(event);
     }
     return super.emit(event, ...args);
