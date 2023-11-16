@@ -1,6 +1,6 @@
 import { fetch } from "./client";
 import EventSource from "eventsource";
-import { console } from "./ManagedServer";
+import { console } from "./console";
 
 export interface Manageable {
   id?: string;

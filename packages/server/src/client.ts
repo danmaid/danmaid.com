@@ -1,84 +1,71 @@
-import { request } from "node:http";
 import { randomUUID } from "node:crypto";
-import {
-  IncomingMessage,
-  RequestOptions,
-  ClientRequest,
-  OutgoingHttpHeaders,
-} from "node:http";
+import { IncomingMessage, RequestOptions, ClientRequest } from "node:http";
 import { Socket } from "node:net";
+import http from "node:http";
+import https from "node:https";
 
-const locals: Set<string> = new Set();
-const connecting: Set<Promise<unknown>> = new Set();
+const sockets = new Set<Socket>();
+const requests = new Set<string>();
 
-function addrToString(addr?: string, family?: string, port?: number): string {
-  return `${family === "IPv6" ? `[${addr}]` : addr}:${port}`;
+export function isLoopbackSocket(socket: Socket): boolean {
+  if (sockets.has(socket)) return true;
+  for (const s of sockets) {
+    if (s.localFamily !== socket.remoteFamily) continue;
+    if (s.localAddress !== socket.remoteAddress) continue;
+    if (s.localPort !== socket.remotePort) continue;
+    return true;
+  }
+  return false;
 }
 
-function getLocalAddr(s: Socket): string {
-  return addrToString(s.localAddress, s.localFamily, s.localPort);
+export function isLoopbackRequest(req: IncomingMessage): boolean {
+  const id = req.headers["request-id"];
+  if (!id) return false;
+  if (typeof id === "string") return requests.has(id);
+  if (Array.isArray(id)) return id.some((v) => requests.has(v));
+  return false;
 }
 
-function getRemoteAddr(s: Socket): string {
-  return addrToString(s.remoteAddress, s.remoteFamily, s.remotePort);
-}
-
-async function getConnection(req: ClientRequest): Promise<Socket> {
-  const connection = new Promise<Socket>((resolve) => {
-    req.once("socket", (socket) => {
-      if (!socket.connecting) return resolve(socket);
-      socket.once("connect", () => resolve(socket));
-    });
+export function request(
+  options: https.RequestOptions | string | URL,
+  callback?: (res: http.IncomingMessage) => void
+): http.ClientRequest;
+export function request(
+  url: string | URL,
+  options: https.RequestOptions,
+  callback?: (res: http.IncomingMessage) => void
+): http.ClientRequest;
+export function request(
+  url: https.RequestOptions | string | URL,
+  ...rest: any[]
+): ClientRequest {
+  const req = url.toString().startsWith("https")
+    ? https.request(url, ...rest)
+    : http.request(url, ...rest);
+  req.on("socket", (socket) => {
+    sockets.add(socket);
+    socket.on("close", () => sockets.delete(socket));
   });
-  connecting.add(connection);
-  connection.then(() => connecting.delete(connection));
-  return connection;
+  const id = randomUUID();
+  req.setHeader("Request-Id", id);
+  requests.add(id);
+  req.on("close", () => requests.delete(id));
+  return req;
 }
 
-interface FetchOptions {
-  headers?: OutgoingHttpHeaders;
-}
-
-let defaults: FetchOptions | undefined;
-export function setDefaults(options: FetchOptions) {
-  defaults = options;
-}
-function getOptions(options: FetchOptions): FetchOptions {
-  if (!defaults) return options;
-  return {
-    ...options,
-    headers: { ...defaults.headers, ...options.headers },
-  };
-}
-
-let wait = Promise.resolve();
-export function setWait(promise: Promise<any>) {
-  wait = promise;
-}
-
-export function fetch(
+export async function fetch(
   url: string,
-  options: RequestOptions & { body?: string } = {}
+  { body, ...options }: RequestOptions & { body?: string } = {}
 ): Promise<
   IncomingMessage & { text(): Promise<string>; json<T>(): Promise<T> }
 > {
-  return new Promise(async (resolve, reject) => {
-    await wait;
-    console.log("fetch", url);
-    const requestId = randomUUID();
-    const req = request(url, getOptions(options), (res) => {
-      resolve(Object.assign(res, { text, json }));
-    });
-    req.setHeader("Request-Id", requestId);
-    if (options.body) req.write(options.body);
+  const res = await new Promise<IncomingMessage>(async (resolve, reject) => {
+    console.log("fetch", url, options);
+    const req = request(url, options, resolve);
+    if (body) req.write(body);
     req.end();
-
-    locals.add(requestId);
-    const socket = await getConnection(req);
-    const connectionId = getLocalAddr(socket);
-    locals.add(connectionId);
-    socket.once("close", () => locals.delete(connectionId));
   });
+  return Object.assign(res, { text, json });
 }
 
 async function text(this: IncomingMessage): Promise<string> {
@@ -90,19 +77,4 @@ async function text(this: IncomingMessage): Promise<string> {
 async function json<T = any>(this: IncomingMessage): Promise<T> {
   const string = await text.apply(this);
   return JSON.parse(string);
-}
-
-export async function isLoopback(req: IncomingMessage): Promise<boolean>;
-export async function isLoopback(socket: Socket): Promise<boolean>;
-export async function isLoopback(
-  key: Socket | IncomingMessage
-): Promise<boolean> {
-  await Promise.all(connecting);
-  if (key instanceof Socket) return locals.has(getRemoteAddr(key));
-  if (key instanceof IncomingMessage) {
-    const id = key.headers["request-id"];
-    if (typeof id !== "string") return false;
-    return locals.has(id);
-  }
-  throw Error("not implemented.");
 }

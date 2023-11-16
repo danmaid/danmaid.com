@@ -1,3 +1,4 @@
+process.env.DANMAID = "http://localhost:6900";
 process.env.MANAGER = "http://localhost:6900";
 
 import { ManagedServer } from "./ManagedServer";
