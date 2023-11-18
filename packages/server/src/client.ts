@@ -3,6 +3,9 @@ import { IncomingMessage, RequestOptions, ClientRequest } from "node:http";
 import { Socket } from "node:net";
 import http from "node:http";
 import https from "node:https";
+import { Manager } from "./Manager";
+import { Connection } from "./Connection";
+import { Session } from "./Session";
 
 const sockets = new Set<Socket>();
 const requests = new Set<string>();
@@ -25,6 +28,8 @@ export function isLoopbackRequest(req: IncomingMessage): boolean {
   if (Array.isArray(id)) return id.some((v) => requests.has(v));
   return false;
 }
+
+const manager = new Manager("http://localhost:6900");
 
 export function request(
   options: https.RequestOptions | string | URL,
@@ -54,7 +59,7 @@ export function request(
 }
 
 export async function fetch(
-  url: string,
+  url: string | URL,
   { body, ...options }: RequestOptions & { body?: string } = {}
 ): Promise<
   IncomingMessage & { text(): Promise<string>; json<T>(): Promise<T> }

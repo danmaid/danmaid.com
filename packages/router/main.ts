@@ -1,51 +1,22 @@
-import { TextLineStream } from "https://deno.land/std@0.136.0/streams/mod.ts";
-
-// see RFC9112
-async function getRoute(readable: ReadableStream): Promise<"default" | "SSE"> {
-  const lines = readable
-    .pipeThrough(new TextDecoderStream())
-    .pipeThrough(new TextLineStream());
-
-  let version: number | undefined;
-  // Request Line
-  const reader = lines.getReader();
-  const line = await reader.read();
-  reader.releaseLock();
-  if (!line.value) {
-    lines.cancel();
-    console.log("Request Line is not found.");
-    return "default";
+Deno.serve({ port: 6900 }, (req, info) => {
+  console.log(new Date(), req, info.remoteAddr);
+  const url = new URL(req.url);
+  url.port = "6901";
+  if (req.headers.get("accept")?.includes("text/event-stream")) {
+    url.port = "6902";
   }
-  console.log("Request Line", line.value);
-  const r = /^GET .* HTTP\/(\d[\d.]*)$/i.exec(line.value);
-  if (!r) {
-    console.log("Reqeust Line is not match.");
-    return "default";
+  if (req.headers.get("upgrade")?.includes("websocket")) {
+    const { socket, response } = Deno.upgradeWebSocket(req);
+    url.protocol = url.protocol.replace("http", "ws");
+    url.port = "6903";
+    console.log("ws", url);
+    const proxy = new WebSocket(url.toString());
+    proxy.onmessage = (ev) => socket.send(ev.data);
+    socket.onmessage = (ev) => proxy.send(ev.data);
+    proxy.onclose = (ev) => socket.close(ev.code, ev.reason);
+    return response;
   }
-  version = parseInt(r[1]);
+  return fetch(url, req);
 
-  // Field lines
-  for await (const line of lines) {
-    console.log("Field Line", line);
-    if (/^Accept: ?text\/event-stream ?$/i.test(line)) {
-      console.log("Match SSE.");
-      return "SSE";
-    }
-    if (line == "") break;
-  }
-  console.log("Field Lines is not match.");
-  lines.cancel();
-  return "default";
-}
-
-const listener = Deno.listen({ port: 6900 });
-for await (const conn of listener) {
-  console.log("connected.", conn.remoteAddr);
-  const [a, b] = conn.readable.tee();
-
-  const route = await getRoute(a);
-  console.log("route", route);
-
-  b.cancel();
-  console.log("closed.");
-}
+  // return new Response("", { status: 471 });
+});
