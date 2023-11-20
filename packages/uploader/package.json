@@ -1,0 +1,15 @@
+{
+  "name": "uploader",
+  "version": "0.0.0",
+  "description": "コンテンツをアップロードする。",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "danmaid",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
+}

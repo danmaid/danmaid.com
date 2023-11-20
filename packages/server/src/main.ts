@@ -1,62 +1,61 @@
-import { manage } from "./maid";
-import { Server } from "node:http";
-import express from "express";
-import { rm, writeFile, mkdir, readdir, rmdir } from "node:fs/promises";
-import { join, dirname } from "node:path";
-import sse, { cast } from "./sse";
-import { Server as WSS, createWebSocketStream } from "ws";
-import { createWriteStream } from "node:fs";
-import { randomUUID } from "node:crypto";
+import { createServer } from "node:http";
+import { open, rm, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 
-const server = new Server();
-server.on("connection", manage("connection"));
-server.on("request", manage("session"));
+const dataDir = "data";
+const port = 80;
 
-const wss = new WSS({ server });
-wss.on("connection", async (socket, req) => {
-  const url = new URL(req.url || "/", "https://localhost");
-  const path = join("data", url.pathname);
-  await mkdir(dirname(path), { recursive: true });
-  createWebSocketStream(socket).pipe(createWriteStream(path));
+const server = createServer(async (req, res) => {
+  if (!req.url) {
+    res.statusCode = 400;
+    res.end();
+    console.warn(Error("req.url is not found."));
+    return;
+  }
+  try {
+    if (req.method === "GET") {
+      const fd = await open(join(dataDir, req.url));
+      const stream = fd.createReadStream();
+      const end = new Promise((x, y) => stream.on("error", y).on("end", x));
+      try {
+        const headerFile = join(dataDir, req.url + ".header.json");
+        const json = await readFile(headerFile, { encoding: "utf-8" });
+        const headers: Record<string, string> = JSON.parse(json);
+        Object.entries(headers).forEach(([k, v]) => res.setHeader(k, v));
+      } catch {}
+      stream.pipe(res);
+      await end;
+      return;
+    }
+    if (req.method === "PUT") {
+      const fd = await open(join(dataDir, req.url), "w");
+      const stream = fd.createWriteStream();
+      const end = new Promise((x, y) => stream.on("error", y).on("finish", x));
+      req.pipe(stream);
+      if (req.headers["content-type"]) {
+        const headerFile = join(dataDir, req.url + ".header.json");
+        const json = JSON.stringify({
+          "Content-Type": req.headers["content-type"],
+        });
+        await writeFile(headerFile, json, { encoding: "utf-8" });
+      }
+      await end;
+      res.end();
+      return;
+    }
+    if (req.method === "DELETE") {
+      await rm(join(dataDir, req.url));
+      res.end();
+      return;
+    }
+    res.statusCode = 501;
+    res.end();
+  } catch (err) {
+    res.statusCode = 404;
+    res.end();
+    console.warn(err);
+    return;
+  }
 });
 
-const app = express();
-app.use(express.static("public"));
-
-app.use(sse());
-
-app.put("*", async (req, res) => {
-  console.debug(">>PUT", req.path);
-  const path = join("data", req.path);
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, req);
-  res.sendStatus(200);
-  cast(req.path, undefined, "PUT");
-  console.debug("<<PUT", req.path);
-});
-app.delete("*", async (req, res) => {
-  console.debug(">>DELETE", req.path);
-  const path = join("data", req.path);
-  await rm(path);
-  if ((await readdir(dirname(path))).length === 0) await rmdir(dirname(path));
-  res.sendStatus(200);
-  cast(req.path, undefined, "DELETE");
-  console.debug("<<DELETE", req.path);
-});
-app.post("*", async (req, res) => {
-  console.debug(">>POST", req.path, req.headers);
-  const id = randomUUID();
-  let path = [req.path, id].join(req.path.endsWith("/") ? "" : "/");
-  await mkdir(dirname(join("data", path)), { recursive: true });
-  await writeFile(join("data", path), req);
-  res.setHeader("Location", `${req.protocol}://${req.headers.host}${path}`);
-  res.sendStatus(201);
-  cast(path, undefined, "POST");
-  console.debug("<<POST", req.path, id);
-});
-
-app.use(express.static("data", { extensions: ["json"], index: "index.json" }));
-
-server.on("request", app);
-
-server.listen(6900, () => console.log("listen. http://localhost:6900"));
+server.listen(port);
