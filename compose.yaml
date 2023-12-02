@@ -1,0 +1,25 @@
+services:
+  server:
+    image: danmaid/server
+    build:
+      context: packages/server
+    ports:
+      - 443:443
+    volumes:
+      - certs:/usr/local/app/certs:ro
+      - ./packages/server/data:/usr/local/app/data:ro
+    environment:
+      - CERT_FILE=/usr/local/app/certs/live/dev.danmaid.com/fullchain.pem
+      - KEY_FILE=/usr/local/app/certs/live/dev.danmaid.com/privkey.pem
+    depends_on:
+      - certbot
+  certbot:
+    image: certbot/certbot
+    ports:
+      - 80:80
+    volumes:
+      - certs:/etc/letsencrypt
+    command: certonly --standalone -d dev.danmaid.com -n --agree-tos --email admin@danmaid.com
+
+volumes:
+  certs:
