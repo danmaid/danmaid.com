@@ -7,7 +7,9 @@ services:
       - 443:443
     volumes:
       - certs:/usr/local/app/certs:ro
-      - ./packages/server/data:/usr/local/app/data:ro
+      - ./data:/usr/local/app/data
+      - ./packages/uploader/public/service-worker.mjs:/usr/local/app/data/service-worker.mjs:ro
+      - ./packages/uploader/public/editor.html:/usr/local/app/data/editor.html:ro
     environment:
       - CERT_FILE=/usr/local/app/certs/live/dev.danmaid.com/fullchain.pem
       - KEY_FILE=/usr/local/app/certs/live/dev.danmaid.com/privkey.pem

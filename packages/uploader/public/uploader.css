@@ -1,0 +1,21 @@
+:root {
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  pointer-events: none;
+}
+
+aside {
+  position: fixed;
+  bottom: 0;
+}
