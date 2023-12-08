@@ -9,8 +9,8 @@ services:
       - certs:/usr/local/app/certs:ro
       - ./data:/usr/local/app/data
     environment:
-      - CERT_FILE=/usr/local/app/certs/live/dev.danmaid.com/fullchain.pem
-      - KEY_FILE=/usr/local/app/certs/live/dev.danmaid.com/privkey.pem
+      - CERT_FILE=/usr/local/app/certs/live/danmaid.com/fullchain.pem
+      - KEY_FILE=/usr/local/app/certs/live/danmaid.com/privkey.pem
     depends_on:
       certbot:
         condition: service_completed_successfully
@@ -19,19 +19,25 @@ services:
         aliases:
           - dev.danmaid.com
   certbot:
-    image: certbot/certbot
-    ports:
-      - 80:80
+    image: certbot/dns-route53
     volumes:
       - certs:/etc/letsencrypt
-    command: certonly --standalone -d dev.danmaid.com -n --agree-tos --email admin@danmaid.com
+    command: certonly --dns-route53 -d danmaid.com -d dev.danmaid.com -n --agree-tos --email admin@danmaid.com
+    environment:
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+
   uploader:
+    profiles:
+      - migrate
     image: danmaid/uploader
     build:
       context: packages/uploader
     volumes:
       - uploader:/usr/local/app/public
   migrate:
+    profiles:
+      - migrate
     image: danmaid/migrate
     build:
       context: .
@@ -40,8 +46,6 @@ services:
     environment:
       - BASE_URL=https://dev.danmaid.com
     depends_on:
-      server:
-        condition: service_started
       uploader:
         condition: service_completed_successfully
 
