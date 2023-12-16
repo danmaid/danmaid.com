@@ -12,6 +12,5 @@ RUN npm install --production
 COPY --from=builder /usr/local/app/lib/ ./lib/
 RUN mkdir data
 CMD [ "npm", "start" ]
-EXPOSE 80
 EXPOSE 443
 VOLUME [ "/usr/local/app/data" ]
