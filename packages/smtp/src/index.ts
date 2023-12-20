@@ -1,5 +1,5 @@
 import { SMTPServer } from "smtp-server";
-import * as store from "./store";
+import * as store from "@danmaid/store";
 
 interface Meta {
   "Content-Type": "message/rfc822";

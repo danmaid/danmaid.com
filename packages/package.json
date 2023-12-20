@@ -1,0 +1,7 @@
+{
+  "workspaces": [
+    "store",
+    "https",
+    "smtp"
+  ]
+}

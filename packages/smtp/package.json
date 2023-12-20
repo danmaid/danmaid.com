@@ -1,12 +1,13 @@
 {
-  "name": "smtp",
-  "version": "0.0.0",
+  "name": "@danmaid/smtp",
+  "version": "0.0.0-0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "jest",
     "build": "tsc",
-    "start": "node lib/serve"
+    "start": "node lib/serve",
+    "dev": "ts-node lib/serve"
   },
   "keywords": [],
   "author": "danmaid",
@@ -22,6 +23,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@danmaid/store": "^0.0.0-0",
     "smtp-server": "^3.13.0"
   }
 }
