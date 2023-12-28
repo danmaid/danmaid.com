@@ -1,11 +1,14 @@
 import { SMTPServer } from "smtp-server";
-import * as store from "@danmaid/store";
+import { randomUUID } from "node:crypto";
+import { connect } from "node:http2";
 
 interface Meta {
   "Content-Type": "message/rfc822";
   "Mail-From"?: string;
   "Rcpt-To"?: string[];
 }
+
+const client = connect("https://danmaid.com");
 
 export const server = new SMTPServer({
   disabledCommands: ["STARTTLS", "AUTH"],
@@ -18,9 +21,15 @@ export const server = new SMTPServer({
         meta["Mail-From"] = session.envelope.mailFrom.address;
       if (session.envelope.rcptTo)
         meta["Rcpt-To"] = session.envelope.rcptTo.map((v) => v.address);
-      const id = await store.add(stream, meta);
+      const id = randomUUID();
+      const req = client.request({
+        ...meta,
+        ":method": "PUT",
+        ":path": `/${id}`,
+      });
+      stream.pipe(req);
+      req.on("response", (headers) => console.log("stored.", id, headers));
       callback();
-      console.log("stored.", id);
     } catch (err) {
       console.error(err);
       stream.destroy();
