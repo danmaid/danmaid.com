@@ -12,6 +12,15 @@ const typeMap = new Map([
 console.log("from", baseDir);
 console.log("to", baseUrl);
 
+for await (const x of Deno.readDir("./modules")) {
+  if (!x.isDirectory) continue;
+  const dir = path.join("./modules", x.name);
+  for await (const y of Deno.readDir(dir)) {
+    if (!y.isFile || !(await isUpdated(y))) continue;
+    await Deno.copyFile(path.join(dir, y.name), path.join(baseDir, y.name));
+  }
+}
+
 for await (const x of Deno.readDir(baseDir)) {
   console.log(x.name);
   if (x.isFile && (await isUpdated(x))) update(x);

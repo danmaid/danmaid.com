@@ -1,0 +1,17 @@
+{
+  "name": "rfc822",
+  "version": "0.0.0",
+  "description": "message/rfc822",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "danmaid",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "vitest": "^1.1.0"
+  }
+}

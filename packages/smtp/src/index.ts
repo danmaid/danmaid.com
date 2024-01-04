@@ -8,8 +8,6 @@ interface Meta {
   "Rcpt-To"?: string[];
 }
 
-const client = connect("https://danmaid.com");
-
 export const server = new SMTPServer({
   disabledCommands: ["STARTTLS", "AUTH"],
   logger: true,
@@ -22,7 +20,7 @@ export const server = new SMTPServer({
       if (session.envelope.rcptTo)
         meta["Rcpt-To"] = session.envelope.rcptTo.map((v) => v.address);
       const id = randomUUID();
-      const req = client.request({
+      const req = connect("https://danmaid.com").request({
         ...meta,
         ":method": "PUT",
         ":path": `/${id}`,

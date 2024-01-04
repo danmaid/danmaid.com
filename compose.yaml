@@ -17,7 +17,7 @@ services:
     networks:
       default:
         aliases:
-          - dev.danmaid.com
+          - danmaid.com
   certbot:
     image: certbot/dns-route53
     volumes:
@@ -26,6 +26,14 @@ services:
     environment:
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY
+  smtp:
+    image: danmaid/smtp
+    build:
+      context: packages/smtp
+    ports:
+      - 25:25
+    depends_on:
+      - server
 
   uploader:
     profiles:
@@ -35,20 +43,33 @@ services:
       context: packages/uploader
     volumes:
       - uploader:/usr/local/app/public
+  rfc822:
+    profiles:
+      - migrate
+    image: danmaid/rfc822
+    build:
+      context: packages/rfc822
+    volumes:
+      - rfc822:/app/lib
   migrate:
     profiles:
       - migrate
     image: danmaid/migrate
     build:
-      context: .
+      context: packages/migrate
     volumes:
-      - uploader:/app/data:ro
+      - ./public:/app/data
+      - uploader:/app/modules/uploader:ro
+      - rfc822:/app/modules/rfc822:ro
     environment:
-      - BASE_URL=https://dev.danmaid.com
+      - BASE_URL=https://danmaid.com
     depends_on:
       uploader:
+        condition: service_completed_successfully
+      rfc822:
         condition: service_completed_successfully
 
 volumes:
   certs:
   uploader:
+  rfc822:
