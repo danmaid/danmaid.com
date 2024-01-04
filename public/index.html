@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="main.css" />
+  <style>
+    table td {
+      max-width: 500px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <table id="table">
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+  <dm-event id="xyz"></dm-event>
+  <script type="module">
+    import { decode } from './rfc822.mjs'
+
+    customElements.define('dm-event', class extends HTMLElement {
+      constructor() {
+        super()
+        const source = new EventSource('')
+        source.addEventListener('PUT', ev => {
+          const e = new Event('PUT', { bubbles: true })
+          e.id = ev.data
+          this.dispatchEvent(e)
+        })
+
+        const button = document.createElement('button')
+        button.textContent = 'sample'
+        button.addEventListener('click', () => {
+          const e = new MessageEvent('PUT', { data: '601919bc-67a6-4ea9-8604-2431cf5c9f2e' })
+          source.dispatchEvent(e)
+        })
+        this.append(button)
+      }
+    })
+    const table = document.getElementById('table')
+    document.getElementById('xyz').addEventListener('PUT', (ev) => {
+      const get = document.createElement('button')
+      get.textContent = 'GET'
+      get.addEventListener('click', async () => {
+        const res = await fetch(ev.id)
+        const e = new Event('GET', { bubbles: true })
+        e.id = ev.id
+        e.response = res
+        get.dispatchEvent(e)
+      })
+
+      const tr = table.insertRow()
+      tr.id = ev.id
+      tr.insertCell().textContent = ev.id
+      tr.insertCell().append(get)
+      tr.addEventListener('GET', (ev) => {
+        const td = tr.insertCell()
+        const pre = document.createElement('pre')
+        pre.textContent = Array.from(ev.response.headers).map(([k, v]) => `${k}: ${v}`).join('\n')
+        td.append(pre)
+
+        const button = document.createElement('button')
+        button.textContent = 'text'
+        button.addEventListener('click', async () => {
+          const td = tr.insertCell()
+          const pre = document.createElement('pre')
+          pre.textContent = await ev.response.text()
+          td.append(pre)
+        })
+        td.append(button)
+
+        if (ev.response.headers.get('content-type') === 'message/rfc822') {
+          const button = document.createElement('button')
+          button.textContent = 'decode'
+          button.addEventListener('click', async () => {
+            const { headers, body } = await decode(ev.response.body)
+            const td = tr.insertCell()
+            const pre = document.createElement('pre')
+            pre.textContent = Object.entries(headers).map(([k, v]) => `${k}: ${v}`).join('\n')
+            td.append(pre)
+
+            const button = document.createElement('button')
+            button.textContent = 'text'
+            button.addEventListener('click', async () => {
+              const td = tr.insertCell()
+              const pre = document.createElement('pre')
+              pre.textContent = await new Response(body).text()
+              td.append(pre)
+            })
+            td.append(button)
+          })
+          td.append(button)
+        }
+      })
+    })
+  </script>
+</body>
+
+</html>
