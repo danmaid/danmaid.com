@@ -32,6 +32,7 @@ class SSE extends Set<Http2ServerResponse> {
 }
 
 const clients = new SSE();
+const sessions = new Map();
 
 export const server = createSecureServer(
   { allowHTTP1: true },
@@ -54,8 +55,15 @@ export const server = createSecureServer(
           const headers: Record<string, string> = JSON.parse(json);
           Object.entries(headers).forEach(([k, v]) => res.setHeader(k, v));
         } catch {}
-        stream.pipe(res);
-        await end;
+        const inprogress = sessions.get(req.url);
+        if (inprogress) {
+          stream.pipe(res, { end: false });
+          await end;
+          inprogress.pipe(res);
+        } else {
+          stream.pipe(res);
+          await end;
+        }
         return;
       }
       if (req.method === "PUT") {
@@ -64,6 +72,7 @@ export const server = createSecureServer(
         const end = new Promise((x, y) =>
           stream.on("error", y).on("finish", x)
         );
+        sessions.set(req.url, req);
         req.pipe(stream);
         if (req.headers["content-type"]) {
           const headerFile = join(dataDir, req.url + ".header.json");
@@ -73,6 +82,7 @@ export const server = createSecureServer(
           await writeFile(headerFile, json, { encoding: "utf-8" });
         }
         await end;
+        sessions.delete(req.url);
         res.end();
         clients.cast(req);
         return;
