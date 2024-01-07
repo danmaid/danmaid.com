@@ -1,0 +1,49 @@
+Received: by mail-lf1-x129.google.com with SMTP id 2adb3069b0e04-50e7e55c0f6so3646616e87.0
+        for <test@self.danmaid.com>; Fri, 29 Dec 2023 05:13:37 -0800 (PST)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=danmaid-co-jp.20230601.gappssmtp.com; s=20230601; t=1703855616; x=1704460416; darn=self.danmaid.com;
+        h=to:subject:message-id:date:from:mime-version:from:to:cc:subject
+         :date:message-id:reply-to;
+        bh=RCRPaw8O7JEvoN/7IYtGW4i3mMj1cfmeIMoTTfPWgkg=;
+        b=2dI0p4CnOzDIAH9l4dMHDq7q/66iuEBpiIj0uMnaqdUvtWaw2WInGC+LZsAyDVoscx
+         VXYDjUfYqfElGg4t693PWiwV/5BYzqzikYPgh954bqqlXHb8UbX2iJCdALe2mAbAMG37
+         TWi1Ou7ApTC9U2ABzm3f/iRfHxEP12civAOn2hOxvq8isgVTEMyvxtc3NwrEO9+xhZ8A
+         N85FjX59Y/5W2cxnc+VexpFeqkEeDXQDoQUEVoOGz7N/IcBa2ssCD1UBdQq5ZAi6VluB
+         FW/3xwq1okWjxXEDgO2zgLJmkR1Fh5Cfub21TqeLsu/Y4cpWOSvmcfjWJqX62Sh+dK0U
+         JtsA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1703855616; x=1704460416;
+        h=to:subject:message-id:date:from:mime-version:x-gm-message-state
+         :from:to:cc:subject:date:message-id:reply-to;
+        bh=RCRPaw8O7JEvoN/7IYtGW4i3mMj1cfmeIMoTTfPWgkg=;
+        b=hlZDtQqPAjPt54zvKRSfICZyHUMoNqmEMWgj7cZQYSNxHflgqoY38/vfDKGPncOZ8D
+         m/HSOfG8HTV/Wqq45lFQ1rbLMB87QKYVB3HFwAW0EnqB/WLrgtZz/AXTd6L1oeCg+qy4
+         SXMYBtLIP8h7ZQW+x0OShPpf0MPKn/WzFkKfwYXWgBlBPOfy5XbdGGOfQZxShO/D1RLo
+         WHkJK49e3QHY9MGi40c7MCmoHw9P6DM7i63l3A7MEznJr2BMyPSW/YkJlTgVvHB4uSVx
+         A8+H0S554gQX38wHgr0r9i7pfklXKDAQpliWWrgMvC7TFAt0/DGUpENP2Zghl2Onrnb2
+         aS0g==
+X-Gm-Message-State: AOJu0YyhkJxDSwauBJjpp52HIu5oYTO86FSRNtD5LVJ3dKLR2xqGgDXh
+	lSrlF/tQUdIRs9h3EZdgc3vhzn/Mr6PvV2aNvWupWOSJdJbaISGhqHFZ0B77
+X-Google-Smtp-Source: AGHT+IHzyZnyDHbsdx/9FxfP4gH3o4OlDgOs4DaID60PHG8+LXM8RlX5tLunzloHKuErWn89nvIx4+FHkMuWgUdqOcc=
+X-Received: by 2002:a05:6512:159b:b0:50e:32af:2e9 with SMTP id
+ bp27-20020a056512159b00b0050e32af02e9mr3664717lfb.215.1703855616394; Fri, 29
+ Dec 2023 05:13:36 -0800 (PST)
+MIME-Version: 1.0
+From: =?UTF-8?B?5bGx55Sw5a+b5rK7?= <owner@danmaid.co.jp>
+Date: Fri, 29 Dec 2023 22:13:23 +0900
+Message-ID: <CAJS46JkC-tfekjq2gH_M=WPB-HwK=7zFjtX5ma802SaqnFHSHg@mail.gmail.com>
+Subject: aaa
+To: test@self.danmaid.com
+Content-Type: multipart/alternative; boundary="000000000000c3a305060da5cc0b"
+
+--000000000000c3a305060da5cc0b
+Content-Type: text/plain; charset="UTF-8"
+
+aaa
+
+--000000000000c3a305060da5cc0b
+Content-Type: text/html; charset="UTF-8"
+
+<div dir="ltr">aaa<div><br></div></div>
+
+--000000000000c3a305060da5cc0b--
