@@ -3,6 +3,7 @@ services:
     image: danmaid/server
     build:
       context: packages/server
+      dockerfile: Dockerfile.deno
     ports:
       - 443:443
     volumes:
