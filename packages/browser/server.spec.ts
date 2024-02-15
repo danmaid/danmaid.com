@@ -176,9 +176,7 @@ describe('use html.', () => {
     const views = new EventSource(`${endpoint}`)
     await new Promise((r) => views.addEventListener('open', r))
     expect(views.readyState).toBe(views.OPEN)
-    const changed = new Promise((resolve, reject) => views.addEventListener('change', (ev) => {
-      'data' in ev && typeof ev.data === 'string' ? resolve(JSON.parse(ev.data)) : reject(ev)
-    }))
+    const changed = new Promise((r) => views.addEventListener('change', (ev) => r(JSON.parse(ev.data))))
     const body = JSON.stringify({ highlighted: true })
     const res = await fetch(`${endpoint}/234`, { method: 'PATCH', body })
     expect(res.ok).toBe(true)
