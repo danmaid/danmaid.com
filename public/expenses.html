@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://danmaid.com/main.css" />
+  <style>
+    input,
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    table:not([edit]) .show-edit {
+      display: none;
+    }
+
+    table[edit] .hide-edit {
+      display: none;
+    }
+
+    [changed] {
+      background-color: yellow;
+    }
+
+    [loading] {
+      border-color: aqua;
+    }
+  </style>
+</head>
+
+<body>
+
+
+
+  <dm-data></dm-data>
+  <script>
+    class DmData extends HTMLElement {
+      value
+      constructor() {
+        super()
+        const load = this.appendChild(document.createElement('button'))
+        load.textContent = 'Load'
+        load.addEventListener('click', () => this.load())
+        const save = this.appendChild(document.createElement('button'))
+        save.textContent = 'Save'
+        save.addEventListener('click', () => this.save())
+      }
+
+      async load() {
+        this.toggleAttribute('loading', true)
+        const res = await fetch('', { headers: { accept: 'application/json' } })
+        this.value = await res.json()
+        this.toggleAttribute('loading', false)
+        this.dispatchEvent(new Event('change'))
+      }
+
+      async save() {
+        this.toggleAttribute('saving', true)
+        const res = await fetch('', {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(this.value)
+        })
+        this.toggleAttribute('saving', false)
+      }
+    }
+    customElements.define('dm-data', DmData)
+    const data = document.querySelector('dm-data')
+  </script>
+
+  <textarea rows="30"></textarea>
+  <script>
+    const textarea = document.querySelector('textarea')
+    data.addEventListener('change', () => {
+      textarea.value = JSON.stringify(data.value, null, 2)
+    })
+    textarea.addEventListener('change', () => {
+      data.value = JSON.parse(textarea.value)
+    })
+  </script>
+
+
+  <table is="edit-table" read="read-row" write="write-row">
+    <thead>
+      <tr>
+        <th>date</th>
+        <th>price</th>
+        <th>supplier</th>
+        <th>summary</th>
+      </tr>
+    </thead>
+  </table>
+  <script>
+    class EditTable extends HTMLTableElement {
+      #value = []
+      get value() { return this.#value }
+      set value(v) {
+        this.#value = Array.from(v)
+        this.render()
+      }
+      tbody = this.createTBody()
+
+      render() {
+        const tbody = this.tbody
+        tbody.replaceChildren()
+        this.#value.forEach((v, i, arr) => {
+          const row = document.createElement('tr', { is: this.getAttribute('read') })
+          row.value = v
+          tbody.appendChild(row)
+
+          const actions = row.insertCell()
+          const edit = actions.appendChild(document.createElement('button'))
+          edit.textContent = '変更'
+          edit.addEventListener('click', () => {
+            const editRow = document.createElement('tr', { is: this.getAttribute('write') })
+            editRow.value = { ...row.value }
+            row.replaceWith(editRow)
+
+            const actions = editRow.insertCell()
+            const commit = actions.appendChild(document.createElement('button'))
+            commit.textContent = '確定'
+            commit.addEventListener('click', () => {
+              arr[i] = row.value = editRow.value
+              editRow.replaceWith(row)
+            })
+            const cancel = actions.appendChild(document.createElement('button'))
+            cancel.textContent = '取り消し'
+            cancel.addEventListener('click', () => editRow.replaceWith(row))
+          })
+        })
+      }
+    }
+    customElements.define('edit-table', EditTable, { extends: 'table' })
+
+    class ReadRow extends HTMLTableRowElement {
+      value = {}
+      date = this.insertCell()
+      price = this.insertCell()
+      supplier = this.insertCell()
+      summary = this.insertCell()
+      connectedCallback() {
+        if (this.isConnected) this.render()
+      }
+
+      render() {
+        this.date.textContent = this.value.date
+        this.price.textContent = this.value.price
+        this.supplier.textContent = this.value.supplier
+        this.summary.textContent = this.value.summary
+      }
+    }
+    customElements.define('read-row', ReadRow, { extends: 'tr' })
+
+    class WriteRow extends HTMLTableRowElement {
+      value = {}
+      date = this.insertCell()
+      price = this.insertCell()
+      supplier = this.insertCell()
+      summary = this.insertCell()
+      connectedCallback() {
+        if (this.isConnected) this.render()
+      }
+
+      render() {
+        const date = this.date.appendChild(document.createElement('input-date'))
+        date.value = this.value.date
+        date.addEventListener('change', () => this.value.date = date.value)
+        const price = this.price.appendChild(document.createElement('input'))
+        price.value = this.value.price
+        price.addEventListener('change', () => this.value.price = price.value)
+        const supplier = this.supplier.appendChild(document.createElement('input'))
+        supplier.value = this.value.supplier
+        supplier.addEventListener('change', () => this.value.supplier = supplier.value)
+        const summary = this.summary.appendChild(document.createElement('input'))
+        summary.value = this.value.summary
+        summary.addEventListener('change', () => this.value.summary = summary.value)
+      }
+    }
+    customElements.define('write-row', WriteRow, { extends: 'tr' })
+
+    class InputDate extends HTMLElement {
+      #value = new Date()
+      get value() { return this.#value }
+      set value(v) {
+        const date = new Date(v)
+        if (date.getTime() < 0) throw TypeError('invalid date.')
+        this.#value = date
+      }
+      constructor() {
+        super()
+        // this.type = 'time'
+        this.type = 'date'
+        // this.type = 'datetime-local'
+        const root = this.attachShadow({ mode: 'open' })
+        root.innerHTML = '<input />'
+      }
+    }
+    customElements.define('input-date', InputDate)
+
+    const table = document.querySelector('table')
+    data.addEventListener('change', () => {
+      table.value = data.value
+    })
+    table.addEventListener('change', () => {
+      data.value = table.value
+    })
+    document.querySelector('table[is="edit-table"]').value = [
+      { id: 'xxx', date: new Date().toISOString(), price: 1000, supplier: 'yyy', summary: 'xyz' },
+      { id: 'yyy', date: new Date('2024-01-30T00:00:00+09:00').toISOString(), price: 1000, supplier: 'yyy', summary: 'xyz' }
+    ]
+  </script>
+</body>
+
+</html>
