@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="main.css" />
+</head>
+
+<body>
+  <div id="sender">
+    <button>CREATE</button>
+    <textarea style="width: 300px; height: 200px"></textarea>
+    <button id="set">SET</button>
+  </div>
+  <div id="receiver">
+    <button>CREATE</button>
+    <textarea style="width: 300px; height: 200px"></textarea>
+    <button id="set">SET</button>
+    <video></video>
+  </div>
+
+  <script>
+    const peer = new RTCPeerConnection()
+
+    const sender = document.getElementById('sender')
+    if (sender) {
+      const input = sender.querySelector('textarea')
+      const button = sender.querySelector('button')
+      button.addEventListener('click', async () => {
+        const offer = await peer.createOffer()
+        input.value = offer.sdp
+      })
+      sender.querySelector('button#set').addEventListener('click', async () => {
+        await peer.setRemoteDescription({ type: "offer", sdp: input.value })
+        console.log(peer)
+      })
+    }
+
+    const receiver = document.getElementById('receiver')
+    if (receiver) {
+      const video = receiver.querySelector('video')
+      const input = receiver.querySelector('textarea')
+      receiver.querySelector('button').addEventListener('click', async () => {
+        const answer = await peer.createAnswer()
+        input.value = answer.sdp
+      })
+      receiver.querySelector('button#set').addEventListener('click', async () => {
+        await peer.setLocalDescription({ type: "answer", sdp: input.value })
+        console.log(peer)
+      })
+    }
+  </script>
+</body>
+
+</html>

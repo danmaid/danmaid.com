@@ -1,0 +1,8 @@
+FROM denoland/deno
+
+EXPOSE 443
+WORKDIR /app
+COPY localhost.crt localhost.key serve.ts SSEStream.ts events.ts filestore.ts ./
+RUN deno cache --reload serve.ts
+
+CMD ["run", "--allow-net", "--allow-read", "--allow-write", "--allow-env", "serve.ts"]

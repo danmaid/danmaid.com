@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "ts-node server"
+    "start": "ts-node server",
+    "test": "npx playwright test"
   },
   "keywords": [],
   "author": "danmaid",

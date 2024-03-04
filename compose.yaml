@@ -3,15 +3,15 @@ services:
     image: danmaid/server
     build:
       context: packages/server
-      dockerfile: Dockerfile.deno
+      dockerfile: Dockerfile.new
     ports:
       - 443:443
     volumes:
-      - certs:/usr/local/app/certs:ro
-      - ./data:/usr/local/app/data
-    environment:
-      - CERT_FILE=/usr/local/app/certs/live/danmaid.com/fullchain.pem
-      - KEY_FILE=/usr/local/app/certs/live/danmaid.com/privkey.pem
+      - certs:/app/certs:ro
+      - ./data:/app/data
+    # environment:
+      # - CERT_FILE=/app/certs/live/danmaid.com/fullchain.pem
+      # - KEY_FILE=/app/certs/live/danmaid.com/privkey.pem
     depends_on:
       certbot:
         condition: service_completed_successfully
@@ -19,6 +19,7 @@ services:
       default:
         aliases:
           - danmaid.com
+
   certbot:
     image: certbot/dns-route53
     volumes:

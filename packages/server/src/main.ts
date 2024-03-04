@@ -6,6 +6,9 @@ import {
 import { open, rm, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
+import * as rfc822 from "./rfc822";
+import { Readable } from "node:stream";
+import readline from "node:readline/promises";
 
 const dataDir = "data";
 const port = 443;
@@ -92,6 +95,85 @@ export const server = createSecureServer(
         res.end();
         clients.cast(req);
         return;
+      }
+      if (req.method === "POST") {
+        if (req.url === "/decode") {
+          const rfc822 = await import("@danmaid/rfc822");
+          const { headers, body } = await rfc822.decode(Readable.toWeb(req));
+          res.writeHead(200, headers);
+          body.pipe(res);
+          return;
+        } // if (req.url === "/decode") {
+        //   if (req.headers["content-type"] === "message/rfc822") {
+        //     const id = randomUUID();
+        //     const file = join(dataDir, id);
+        //     const body = await open(file, "w");
+        //     let isBody = false;
+        //     const header: [string, string][] = [];
+        //     for await (const line of readline.createInterface(req.stream)) {
+        //       if (isBody) await body.write(line + "\r\n");
+        //       else if (line === "") isBody = true;
+        //       else {
+        //         // RFC5322 2.2.3. Long Header Fields
+        //         if (/^[\x20\x09]/.test(line)) {
+        //           header[header.length - 1][1] += line;
+        //           continue;
+        //         }
+        //         const [k, v] = line.split(":");
+        //         header.push([k, v.trimStart()]);
+        //       }
+        //     }
+        //     await body.close();
+        //     await writeFile(
+        //       file + ".header.json",
+        //       JSON.stringify(Object.fromEntries(header)),
+        //       { encoding: "utf-8" }
+        //     );
+        //     res.writeHead(201, { Location: "/" + id });
+        //     res.end();
+        //     return;
+        //   }
+        //   if (req.headers["content-type"]?.startsWith("multipart/")) {
+        //     const type = req.headers["content-type"];
+        //     const boundary = /boundary="(.+)"/.exec(type)?.[1];
+        //     const reader = readline.createInterface(Readable.from(req));
+        //     let header;
+        //     let headerEnd = false;
+        //     let body;
+        //     for await (const line of reader) {
+        //       if (line.startsWith(`--${boundary}`)) {
+        //         if (line.endsWith("--")) {
+        //           // end
+        //         } else {
+        //           // (re)start
+        //           if (header) {
+        //             // save
+        //           }
+        //           header = {};
+        //           headerEnd = false;
+        //           body = undefined;
+        //         }
+        //         continue;
+        //       }
+        //       if (headerEnd) {
+        //         // body
+        //         body = body ? body + line : line;
+        //         continue;
+        //       } else {
+        //         if (line === "") {
+        //           headerEnd = true;
+        //           continue;
+        //         }
+        //         // header
+        //       }
+        //     }
+        //     res.writeHead(300, {
+        //       link: ["</xxx>; type=text/plain", "</yyy>; type=text/html"],
+        //     });
+        //     res.end();
+        //     return;
+        //   }
+        // }
       }
       res.statusCode = 501;
       res.end();

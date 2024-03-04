@@ -2,6 +2,9 @@
   "workspaces": [
     "store",
     "https",
-    "smtp"
+    "smtp",
+    "logger",
+    "rfc822",
+    "server"
   ]
 }

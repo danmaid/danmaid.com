@@ -13,6 +13,7 @@ export function connect(req: Request, info?: unknown): Response {
       }
     }
   }
+  console.log('SSE connected.', info)
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
@@ -24,13 +25,19 @@ export function connect(req: Request, info?: unknown): Response {
 export function broadcast(data: string, type?: string): string {
   const id = crypto.randomUUID()
   events.push({ id, data, type })
+  console.log('SSE broadcast', id, type, data)
   for (const client of clients) try {
     client.send(data, type, id);
+    console.log('SSE sent.', client.info)
   } catch (err) {
     clients.delete(client);
     console.log('client is dead.', err)
   }
   return id
+}
+
+export async function close() {
+  await Promise.all([...clients].map((v) => v.controller?.close()))
 }
 
 class Client extends ReadableStream<Uint8Array> {

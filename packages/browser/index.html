@@ -4,50 +4,31 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="https://danmaid.com/main.css" />
+  <script src="index.js" defer></script>
   <style>
-    body {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .card {
-      width: 100%;
-      height: 250px;
-      border: 1px solid;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+    td,
+    th {
+      border-right: 1px solid;
+      border-bottom: 1px solid;
     }
   </style>
 </head>
 
 <body>
-  <script type="module">
-    const events = new EventSource('')
-    events.addEventListener('change', (ev) => {
-      const view = JSON.parse(ev.data)
-      if (!document.getElementById(view.id)) appendView(view)
-    })
-    events.addEventListener('remove', (ev) => {
-      document.getElementById(ev.data)?.remove()
-    })
-
-    const res = await fetch('', { headers: { accept: 'application/json' } })
-    const data = await res.json()
-    for (const view of data) appendView(view)
-
-    function appendView(view) {
-      const t = document.createElement('div')
-      t.id = view.id
-      t.classList.add('card')
-      t.appendChild(document.createElement('span')).textContent = view.id
-      t.appendChild(document.createElement('span')).textContent = view.title
-      t.addEventListener('click', () => {
-        fetch(view.id, { method: 'PATCH', body: JSON.stringify({ highlighted: true }) })
-      })
-      document.body.appendChild(t)
-    }
-  </script>
+  <button id="clear">clear</button>
+  <table id="source">
+    <caption>source <button id="reload">reload</button></caption>
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+  <table id="tabs">
+    <caption>tabs <button id="reload">reload</button></caption>
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+  <table id="store">
+    <caption>store <button id="reload">reload</button></caption>
+    <thead></thead>
+    <tbody></tbody>
+  </table>
 </body>

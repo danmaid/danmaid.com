@@ -1,8 +1,10 @@
 {
-  "name": "rfc822",
+  "name": "@danmaid/rfc822",
   "version": "0.0.0",
   "description": "message/rfc822",
-  "main": "index.js",
+  "type": "module",
+  "exports": "./lib/rfc822.js",
+  "types": "./lib/rfc822.d.ts",
   "scripts": {
     "build": "tsc",
     "test": "jest"

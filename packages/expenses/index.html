@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://danmaid.com/main.css" />
+  <style>
+    progress {
+      width: 100%;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    [invalid] {
+      background-color: #ff0000;
+    }
+
+    [changed] {
+      background-color: #ffa500f0;
+      color: #ffffff;
+    }
+
+    td:nth-child(1) {
+      font-family: monospace;
+    }
+  </style>
+</head>
+
+<body>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>date</th>
+        <th>price</th>
+        <th>supplier</th>
+        <th>summary</th>
+        <td><button onclick="load()">Load</button><button onclick="save()">Save</button><button
+            onclick="download()">Download</button><button onclick="upload()">Upload</button></td>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+    <tbody>
+      <tr>
+        <td><input id="newid" /></td>
+        <td><button onclick="add()">Add</button></td>
+      </tr>
+    </tbody>
+  </table>
+  <script>
+    const tbody = document.getElementById('tbody')
+    let value
+
+    async function load() {
+      const res = await fetch('', { headers: { accept: 'application/json' } })
+      value = await res.json()
+      render()
+    }
+
+    function render() {
+      tbody.replaceChildren()
+      for (const meta of value) {
+        const tr = document.createElement('tr', { is: 'table-row' })
+        tr.value = meta
+        tbody.appendChild(tr)
+      }
+    }
+
+    async function save() {
+      const value = [...tbody.rows].map(v => v.value)
+      console.log(value)
+      const res = await fetch('', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(value)
+      })
+    }
+
+    function download() {
+      const value = [...tbody.rows].map(v => v.value)
+      console.log(value)
+      const data = new Blob([JSON.stringify(value)], { type: 'application/json' })
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(data)
+      a.download = 'expenses.json'
+      a.click()
+    }
+
+    function upload() {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.addEventListener('change', async () => {
+        const res = await new Response(input.files[0])
+        value = await res.json()
+        render()
+      })
+      input.click()
+    }
+
+    function add() {
+      const newid = document.getElementById('newid')
+      const id = newid.value
+      const tr = document.createElement('tr', { is: 'table-row' })
+      tr.value = { id }
+      tbody.appendChild(tr)
+      newid.value = null
+    }
+
+    customElements.define('table-row', class extends HTMLTableRowElement {
+      value
+      inputValue
+      cells = [...new Array(6)].map(() => this.insertCell())
+
+      connectedCallback() {
+        if (this.isConnected) this.render()
+      }
+
+      render() {
+        this.cells[0].textContent = this.value.id
+        this.cells[1].textContent = this.value.date
+        this.cells[2].textContent = this.value.price
+        this.cells[3].textContent = this.value.supplier
+        this.cells[4].textContent = this.value.summary
+        this.cells[5].replaceChildren(
+          this.craeteButton('load'),
+          this.craeteButton('edit'),
+          this.craeteButton('up', () => this.previousElementSibling?.before(this)),
+          this.craeteButton('down', () => this.nextElementSibling?.after(this))
+        )
+      }
+
+      craeteButton(key, listener = () => this[key]()) {
+        const button = document.createElement('button')
+        button.textContent = key[0].toUpperCase() + key.slice(1)
+        button.addEventListener('click', listener)
+        return button
+      }
+
+      edit() {
+        this.inputValue = {}
+        this.cells[0].replaceChildren(this.createInput('id'))
+        this.cells[1].replaceChildren(this.createInput('date'))
+        this.cells[2].replaceChildren(this.createInput('price'))
+        this.cells[3].replaceChildren(this.createInput('supplier'))
+        this.cells[4].replaceChildren(this.createInput('summary'))
+        this.cells[5].replaceChildren(this.craeteButton('save'), this.craeteButton('cancel'), this.craeteButton('remove'))
+      }
+
+      createInput(key) {
+        const input = document.createElement('input')
+        input.value = this.value[key] || null
+        input.addEventListener('change', () => this.inputValue[key] = input.value)
+        return input
+      }
+
+      async progress(fn) {
+        for (const cell of this.cells.slice(2, 5)) cell.remove()
+        const progress = document.createElement('td')
+        progress.colSpan = 4
+        progress.appendChild(document.createElement('progress'))
+        this.cells[1].replaceWith(progress)
+        try {
+          await fn()
+        } finally {
+          progress.replaceWith(...this.cells.slice(1, 5))
+        }
+      }
+
+      async load() {
+        await this.progress(async () => {
+          await new Promise(r => setTimeout(r, 1000))
+          const res = await fetch(this.value.id, { accept: 'application/json' })
+          const value = await res.json()
+          this.value.date = value.date
+          this.value.price = value.price
+          this.value.supplier = value.supplier
+          this.value.summary = value.summary
+          this.render()
+        })
+      }
+
+      async save() {
+        const id = this.value.id || this.inputValue.id
+        if (!id) return
+        const res = await fetch(id, { accept: 'application/json' })
+        const value = res.ok ? await res.json() : {}
+        Object.assign(value, this.inputValue)
+        console.log('save', value)
+        {
+          const res = await fetch(id, {
+            method: 'PUT',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(value)
+          })
+          if (res.ok) {
+            this.value = { id, ...value }
+            this.render()
+          }
+          await res.body?.cancel()
+        }
+      }
+
+      cancel() {
+        this.render()
+      }
+    }, { extends: 'tr' })
+  </script>
+</body>
+
+</html>

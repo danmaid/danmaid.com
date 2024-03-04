@@ -1,4 +1,4 @@
-// RFC 5322
+// message/rfc822 => header, body
 export async function decode(stream) {
     const reader = stream.getReader();
     let header = "";

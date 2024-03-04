@@ -58,107 +58,63 @@ async function handler(req: Request): Promise<Response> {
   const { method } = req;
   try {
     if (method === "GET") {
-      const { headers } = req;
-      const accept = headers.get("accept");
+      const path = decodeURIComponent(new URL(req.url).pathname);
+      const accept = req.headers.get("accept");
       // Connect SSE
       if (accept === "text/event-stream") return connect(req);
       // Content-Type Negotiation
       if (accept && accept !== "*/*") {
-        const { url } = req;
-        let res;
+        const get = async (v?: string) => {
+          if (v) {
+            const l = `${path}/${v}`;
+            const { meta, body } = await load(await resolveLocation(l));
+            const headers = new Headers(meta);
+            headers.set("content-location", l);
+            return new Response(body, { headers });
+          }
+          const { meta, body } = await load(await resolveLocation(path));
+          return new Response(body, { headers: meta });
+        };
         for (const type of parseAccept(accept)) {
           try {
-            const request =
-              type === "*/*"
-                ? req
-                : type.endsWith("/*")
-                ? new Request(`${url}/${type.split("/", 1)[0]}`)
-                : new Request(`${url}/${type}`);
-            res = await get(request);
-            break;
+            if (type === "*/*") return await get();
+            if (type.endsWith("/*")) return await get(type.split("/", 1)[0]);
+            return await get(type);
           } catch (err) {
             console.debug(err);
-            continue;
           }
         }
-        return res ? res : new Response(null, { status: 404 });
+        return new Response(null, { status: 404 });
       }
       // Permanent
-      return await get(req);
+      const resolved = await resolveLocation(path);
+      const { meta, body } = await load(resolved);
+      const headers =
+        resolved === path ? meta : { ...meta, "content-location": resolved };
+      return new Response(body, { headers });
     }
     if (method === "PUT") {
-      {
-        const path = await resolve(req);
-        const meta = Object.fromEntries(req.headers);
-        const body = await getBody(req.body).catch(() => undefined);
-        await save(path, meta, body);
-        console.log("saved.", path);
-        dispatchEvent(new StoreEvent(path, meta));
+      const path = await resolve(req);
+      const meta = Object.fromEntries(req.headers);
+      const body = await getBody(req.body).catch(() => undefined);
+      await save(path, meta, body);
+      console.log("saved.", path);
+      dispatchEvent(new StoreEvent(path, meta));
 
-        const reqpath = decodeURIComponent(new URL(req.url).pathname);
-        if (reqpath === path) return new Response();
-        try {
-          const { meta: m } = await load(reqpath, false);
-          // dispatch default
-          if (m["content-location"] === path) {
-            dispatchEvent(new StoreEvent(reqpath, meta));
-          }
-        } catch {
-          // set default if not exist.
-          await save(reqpath, { "content-location": path });
+      const reqpath = decodeURIComponent(new URL(req.url).pathname);
+      if (reqpath === path) return new Response();
+      try {
+        const { meta: m } = await load(reqpath, false);
+        // dispatch default
+        if (m["content-location"] === path) {
           dispatchEvent(new StoreEvent(reqpath, meta));
         }
-        return new Response();
+      } catch {
+        // set default if not exist.
+        await save(reqpath, { "content-location": path });
+        dispatchEvent(new StoreEvent(reqpath, meta));
       }
-      {
-        const { url, headers, body } = req;
-        const path = decodeURIComponent(new URL(url).pathname);
-        // Content-Type Negotiation
-        if (headers.has("content-type")) {
-          const type =
-            headers.get("content-type")?.split(";")[0] ||
-            "application/octet-stream";
-          const contentPath = join(dataDir, path, type);
-
-          await Deno.mkdir(dirname(contentPath), { recursive: true });
-          try {
-            const body = await getBody(req.body);
-            const file = await Deno.open(contentPath, {
-              write: true,
-              truncate: true,
-              create: true,
-            });
-            await body.pipeTo(file.writable);
-          } catch {
-            console.log("body is empty.");
-          }
-          const meta = Object.fromEntries(headers);
-          if (Object.keys(meta).length > 0)
-            await Deno.writeTextFile(
-              contentPath + headerExt,
-              JSON.stringify(meta)
-            );
-          dispatchEvent(new StoreEvent(`${path}/${type.trim()}`, meta));
-          {
-            // store default
-            const filePath = join(dataDir, path + headerExt);
-            try {
-              await Deno.stat(filePath);
-            } catch {
-              const meta = { "content-location": `${path}/${type.trim()}` };
-              await Deno.writeTextFile(filePath, JSON.stringify(meta));
-              dispatchEvent(new StoreEvent(path, meta));
-            }
-            return new Response(null, { status: 200 });
-          }
-        }
-        // Permanent
-        {
-          const meta = Object.fromEntries(headers);
-          await save(path, meta, await getBody(body).catch(() => undefined));
-          dispatchEvent(new StoreEvent(path, meta));
-        }
-      }
+      return new Response();
     }
     if (method === "DELETE") {
       const { url } = req;
@@ -186,28 +142,6 @@ async function resolve({ url, headers }: Request): Promise<string> {
 async function resolveLocation(path: string): Promise<string> {
   const { meta } = await load(path, false).catch(() => ({ meta: {} }));
   return meta["content-location"] || path;
-}
-
-async function get(req: Request): Promise<Response> {
-  const { url } = req;
-  const path = join(dataDir, decodeURIComponent(new URL(url).pathname));
-  const xx = await Deno.readTextFile(path + headerExt);
-  const headers = new Headers(JSON.parse(xx));
-
-  const cl = headers.get("content-location");
-  if (cl) {
-    const res = await get(new Request(new URL(cl, url)));
-    headers.forEach((v, k) => res.headers.set(k, v));
-    return res;
-  }
-  const file = await Deno.open(path, { read: true });
-  const stat = await file.stat();
-  console.debug("stat", stat);
-  if (stat.isDirectory) {
-    file.close();
-    return new Response(null, { status: 200, headers });
-  }
-  return new Response(file.readable, { status: 200, headers });
 }
 
 function parseAccept(accept: string): string[] {

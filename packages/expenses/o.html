@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://danmaid.com/main.css" />
+  <style>
+    input,
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    table:not([edit]) .show-edit {
+      display: none;
+    }
+
+    table[edit] .hide-edit {
+      display: none;
+    }
+
+    [changed] {
+      background-color: yellow;
+    }
+
+    [loading] {
+      border-color: aqua;
+    }
+
+    table tbody td:nth-child(1) {
+      font-family: monospace;
+    }
+
+    table {
+      white-space: nowrap;
+    }
+
+    [success] {
+      border-color: greenyellow;
+    }
+
+    [ignore] {
+      border-color: orange;
+    }
+  </style>
+</head>
+
+<body>
+  <dm-data></dm-data>
+  <script>
+    class DmData extends HTMLElement {
+      value
+      constructor() {
+        super()
+        const load = this.appendChild(document.createElement('button'))
+        load.textContent = 'Load'
+        load.addEventListener('click', () => this.load())
+        const save = this.appendChild(document.createElement('button'))
+        save.textContent = 'Save'
+        save.addEventListener('click', () => this.save())
+      }
+
+      async load() {
+        this.toggleAttribute('loading', true)
+        const res = await fetch('', { headers: { accept: 'text/plain' } })
+        this.value = await res.json()
+        this.toggleAttribute('loading', false)
+        this.dispatchEvent(new Event('change'))
+      }
+
+      async save() {
+        this.toggleAttribute('saving', true)
+        const res = await fetch('', {
+          method: 'PUT',
+          headers: { 'content-type': 'text/plain' },
+          body: this.value
+        })
+        this.toggleAttribute('saving', false)
+      }
+    }
+    customElements.define('dm-data', DmData)
+    const data = document.querySelector('dm-data')
+  </script>
+
+  <textarea rows="20"></textarea>
+  <script>
+    const textarea = document.querySelector('textarea')
+    data.addEventListener('change', () => (textarea.value = data.value))
+    textarea.addEventListener('change', () => (data.value = textarea.value))
+  </script>
+
+  <table is="edit-table" read="read-row" write="write-row">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>date</th>
+        <th>price</th>
+        <th>supplier</th>
+        <th>summary</th>
+      </tr>
+    </thead>
+  </table>
+
+  <table>
+    <tr>
+      <td>xxx</td>
+      <td>yyy</td>
+      <td>zzz</td>
+    </tr>
+  </table>
+
+  <table id="t"></table>
+  <script>
+    const t = document.getElementById('t')
+    if (!(t instanceof HTMLTableElement)) throw Error('invalid t')
+    load('xxx\nyyy\nzzz\n\n\n')
+    async function load(data) {
+      if (!(t instanceof HTMLTableElement)) throw Error('invalid t')
+      for (const id of data.split('\n')) {
+        const tr = t.insertRow()
+        tr.textContent = id
+        try {
+          await getDetail(id)
+        } catch (err) {
+          tr.setAttribute('error', err)
+          console.error(err)
+        }
+      }
+    }
+
+    async function getDetail(id) {
+      console.log(id)
+      const headers = { accept: 'application/json' }
+      const res = await fetch(id, { headers })
+      return await res.json()
+    }
+  </script>
+
+  <script>
+    class EditTable extends HTMLTableElement {
+      #value = []
+      get value() { return this.#value }
+      set value(v) {
+        this.#value = Array.from(v)
+        this.render()
+      }
+      tbody = this.createTBody()
+
+      render() {
+        const tbody = this.tbody
+        tbody.replaceChildren()
+        this.#value.forEach((v, i, arr) => {
+          const row = document.createElement('tr', { is: this.getAttribute('read') })
+          row.value = v
+          tbody.appendChild(row)
+
+          const actions = row.insertCell()
+          const edit = actions.appendChild(document.createElement('button'))
+          edit.textContent = '変更'
+          edit.addEventListener('click', () => {
+            const editRow = document.createElement('tr', { is: this.getAttribute('write') })
+            editRow.value = { ...row.value }
+            editRow.addEventListener('change', (ev) => ev.stopPropagation())
+            row.replaceWith(editRow)
+
+            const actions = editRow.insertCell()
+            const commit = actions.appendChild(document.createElement('button'))
+            commit.textContent = '確定'
+            commit.addEventListener('click', () => {
+              arr[i] = row.value = editRow.value
+              editRow.replaceWith(row)
+              row.dispatchEvent(new Event('change', { bubbles: true }))
+            })
+            const cancel = actions.appendChild(document.createElement('button'))
+            cancel.textContent = '取り消し'
+            cancel.addEventListener('click', () => editRow.replaceWith(row))
+          })
+          const migrate = actions.appendChild(document.createElement('button'))
+          migrate.textContent = '移行'
+          migrate.addEventListener('click', async () => {
+            const res = await fetch(row.value.id, { headers: { accept: 'application/vnd.danmaid.cost+json' } })
+            if (!res.ok) return migrate.toggleAttribute('ignore', true)
+            const cost = await res.json()
+            console.log(cost)
+            migrate.toggleAttribute('success', true)
+          })
+        })
+      }
+    }
+    customElements.define('edit-table', EditTable, { extends: 'table' })
+
+    class ReadRow extends HTMLTableRowElement {
+      value = {}
+      id = this.insertCell()
+      date = this.insertCell()
+      price = this.insertCell()
+      supplier = this.insertCell()
+      summary = this.insertCell()
+      connectedCallback() {
+        if (this.isConnected) this.render()
+      }
+
+      render() {
+        this.id.replaceChildren()
+        const a = this.id.appendChild(document.createElement('a'))
+        a.textContent = a.href = this.value.id
+        a.target = '_blank'
+        this.date.textContent = this.formatDate(this.value.date)
+        this.price.textContent = this.value.price
+        this.supplier.textContent = this.value.supplier
+        this.summary.textContent = this.value.summary
+      }
+
+      formatDate(v) {
+        const date = new Date(v)
+        if (date.getTime() < 0) throw TypeError('invalid date.')
+
+        const YYYY = date.getFullYear()
+        const MM = ('00' + (date.getMonth() + 1)).slice(-2)
+        const DD = ('00' + date.getDate()).slice(-2)
+        const hh = ('00' + date.getHours()).slice(-2)
+        const mm = ('00' + date.getMinutes()).slice(-2)
+
+        return hh === '00' && mm === '00'
+          ? `${YYYY}-${MM}-${DD}`
+          : `${YYYY}-${MM}-${DD} ${hh}:${mm}`
+      }
+    }
+    customElements.define('read-row', ReadRow, { extends: 'tr' })
+
+    class WriteRow extends HTMLTableRowElement {
+      value = {}
+      id = this.insertCell()
+      date = this.insertCell()
+      price = this.insertCell()
+      supplier = this.insertCell()
+      summary = this.insertCell()
+      connectedCallback() {
+        if (this.isConnected) this.render()
+      }
+
+      render() {
+        const id = this.id.appendChild(document.createElement('input'))
+        id.value = this.value.id || null
+        id.addEventListener('change', () => this.value.id = id.value = id.value.trim())
+        const date = this.date.appendChild(document.createElement('input-date'))
+        date.value = this.value.date || null
+        date.addEventListener('change', () => this.value.date = date.value)
+        const price = this.price.appendChild(document.createElement('input'))
+        price.value = this.value.price || null
+        price.type = 'number'
+        price.addEventListener('change', () => this.value.price = parseInt(price.value))
+        const supplier = this.supplier.appendChild(document.createElement('input'))
+        supplier.value = this.value.supplier || null
+        supplier.addEventListener('change', () => this.value.supplier = supplier.value = supplier.value.trim())
+        const summary = this.summary.appendChild(document.createElement('input'))
+        summary.value = this.value.summary || null
+        summary.addEventListener('change', () => this.value.summary = summary.value = summary.value.trim())
+      }
+    }
+    customElements.define('write-row', WriteRow, { extends: 'tr' })
+
+    class InputDate extends HTMLElement {
+      picker
+      text
+      #value = new Date()
+      get value() { return this.#value }
+      set value(v) {
+        const date = new Date(typeof v === 'string' ? v.trim() : v)
+        if (date.getTime() < 0) throw TypeError('invalid date.')
+        this.#value = date
+
+        const YYYY = date.getFullYear()
+        const MM = ('00' + (date.getMonth() + 1)).slice(-2)
+        const DD = ('00' + date.getDate()).slice(-2)
+        const hh = ('00' + date.getHours()).slice(-2)
+        const mm = ('00' + date.getMinutes()).slice(-2)
+        this.picker.value = `${YYYY}-${MM}-${DD}T${hh}:${mm}`
+
+        this.text.value = hh === '00' && mm === '00'
+          ? `${YYYY}-${MM}-${DD}`
+          : `${YYYY}-${MM}-${DD} ${hh}:${mm}`
+        this.dispatchEvent(new Event('change'))
+      }
+      constructor() {
+        super()
+        const root = this.attachShadow({ mode: 'open' })
+        root.innerHTML = `
+          <style>
+            :host { position: relative; display: block; }
+            input { box-sizing: border-box; }
+            .picker { position: absolute; top: 2px; width: 100%; }
+            .text { position: sticky; width: calc(100% - 20px); }
+          </style>
+        `
+        const picker = document.createElement('input')
+        picker.type = 'datetime-local'
+        picker.classList.add('picker')
+        picker.addEventListener('change', () => this.value = picker.value)
+        this.picker = root.appendChild(picker)
+        const text = document.createElement('input')
+        text.classList.add('text')
+        text.addEventListener('change', () => this.value = text.value)
+        this.text = root.appendChild(text)
+      }
+    }
+    customElements.define('input-date', InputDate)
+
+    const table = document.querySelector('table')
+    data.addEventListener('change', () => {
+      table.value = data.value
+    })
+    table.addEventListener('change', () => {
+      data.value = table.value
+    })
+    // document.querySelector('table[is="edit-table"]').value = [
+    //   { id: 'xxx', date: new Date().toISOString(), price: 1000, supplier: 'yyy', summary: 'xyz' },
+    //   { id: 'yyy', date: new Date('2024-01-30T00:00:00+09:00').toISOString(), price: 1000, supplier: 'yyy', summary: 'xyz' }
+    // ]
+  </script>
+</body>
+
+</html>

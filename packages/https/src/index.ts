@@ -46,7 +46,7 @@ async function getContentType(id: string): Promise<string> {
   if ("Content-Type" in meta) {
     if (typeof meta["Content-Type"] === "string") return meta["Content-Type"];
   }
-  const type = Object.entries(meta).find(
+  const type = Object.entries(meta).some(
     ([k, v]) => k.toLowerCase() === "content-type" && typeof v === "string"
   );
   if (!type) throw Error("Content-Type is not found.");

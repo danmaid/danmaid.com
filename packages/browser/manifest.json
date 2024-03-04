@@ -5,10 +5,14 @@
   "version": "1.0",
   "action": {},
   "permissions": [
-    "debugger",
-    "tabs"
+    "tabs",
+    "storage"
   ],
   "background": {
-    "service_worker": "service-worker.js"
-  }
+    "service_worker": "lib/agent4.js",
+    "type": "module"
+  },
+  "host_permissions": [
+    "https://localhost/*"
+  ]
 }

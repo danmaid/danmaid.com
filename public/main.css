@@ -1,0 +1,22 @@
+:root {
+  --color-fg: #b6c0e2;
+  --color-fg-blur: #4762b8;
+  --color-bg: #1a1a1a;
+}
+
+:link {
+  color: var(--color-fg);
+}
+
+:visited {
+  color: var(--color-fg);
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+  filter: drop-shadow(0 1px 1px var(--color-fg-blur))
+    drop-shadow(1px 0 1px var(--color-fg-blur))
+    drop-shadow(0 -1px 1px var(--color-fg-blur))
+    drop-shadow(-1px 0 1px var(--color-fg-blur));
+}

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <link rel="stylesheet" href="https://danmaid.com/main.css" />
+</head>
+
+<body>
+  <!-- access log -->
+  <EventListner type="request">
+    <Logger></Logger>
+  </EventListner>
+  <EventListener type="response">
+    <Logger></Logger>
+  </EventListener>
+
+  <EventListener type="reqeust">
+    <Dispatcher></Dispatcher>
+  </EventListener>
+  <EventListener type="store">
+    <Save></Save>
+  </EventListener>
+
+  <EventListner type="request">
+    <Dispatcher></Dispatcher>
+  </EventListner>
+
+  <Server scheme="https">
+    <RequestHandler></RequestHandler>
+  </Server>
+
+  <button>PUT https://danmaid.com/xxx/yyy/zzz</button>
+  <script>
+    document.currentScript.previousElementSibling.addEventListener('click', (ev) => {
+      const xxx = document.body.appendChild(document.createElement('fieldset'))
+      xxx.appendChild(document.createElement('legend')).textContent = 'xxx'
+      const yyy = xxx.appendChild(document.createElement('fieldset'))
+      yyy.appendChild(document.createElement('legend')).textContent = 'yyy'
+      const zzz = yyy.appendChild(document.createElement('fieldset'))
+      zzz.appendChild(document.createElement('legend')).textContent = 'zzz'
+
+      const e = document.createElement('span')
+      e.textContent = 'request'
+      zzz.appendChild(e)
+
+      bubble(e)
+    })
+
+    async function bubble(t, wait = 1000) {
+      if (!(t instanceof HTMLElement)) throw Error('t is not HTMLElement')
+      t.style.padding = '4px'
+      t.style.border = '1px solid red'
+      t.style.borderRadius = '8px'
+      for (let p = t.parentElement; p !== document.body; p = p.parentElement) {
+        p.prepend(t)
+        await new Promise(r => setTimeout(r, wait))
+        console.log(p)
+        p.removeChild(t)
+      }
+    }
+  </script>
+
+</body>
+
+</html>

@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "./file.ts": "./file.mock.ts",
+    "./file.actual.ts": "./file.ts"
+  }
+}

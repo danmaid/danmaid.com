@@ -115,6 +115,7 @@
           edit.addEventListener('click', () => {
             const editRow = document.createElement('tr', { is: this.getAttribute('write') })
             editRow.value = { ...row.value }
+            editRow.addEventListener('change', (ev) => ev.stopPropagation())
             row.replaceWith(editRow)
 
             const actions = editRow.insertCell()
@@ -123,6 +124,7 @@
             commit.addEventListener('click', () => {
               arr[i] = row.value = editRow.value
               editRow.replaceWith(row)
+              row.dispatchEvent(new Event('change', { bubbles: true }))
             })
             const cancel = actions.appendChild(document.createElement('button'))
             cancel.textContent = '取り消し'
@@ -144,10 +146,25 @@
       }
 
       render() {
-        this.date.textContent = this.value.date
+        this.date.textContent = this.formatDate(this.value.date)
         this.price.textContent = this.value.price
         this.supplier.textContent = this.value.supplier
         this.summary.textContent = this.value.summary
+      }
+
+      formatDate(v) {
+        const date = new Date(v)
+        if (date.getTime() < 0) throw TypeError('invalid date.')
+
+        const YYYY = date.getFullYear()
+        const MM = ('00' + (date.getMonth() + 1)).slice(-2)
+        const DD = ('00' + date.getDate()).slice(-2)
+        const hh = ('00' + date.getHours()).slice(-2)
+        const mm = ('00' + date.getMinutes()).slice(-2)
+
+        return hh === '00' && mm === '00'
+          ? `${YYYY}-${MM}-${DD}`
+          : `${YYYY}-${MM}-${DD} ${hh}:${mm}`
       }
     }
     customElements.define('read-row', ReadRow, { extends: 'tr' })
@@ -180,20 +197,48 @@
     customElements.define('write-row', WriteRow, { extends: 'tr' })
 
     class InputDate extends HTMLElement {
+      picker
+      text
       #value = new Date()
       get value() { return this.#value }
       set value(v) {
         const date = new Date(v)
         if (date.getTime() < 0) throw TypeError('invalid date.')
         this.#value = date
+
+        const YYYY = date.getFullYear()
+        const MM = ('00' + (date.getMonth() + 1)).slice(-2)
+        const DD = ('00' + date.getDate()).slice(-2)
+        const hh = ('00' + date.getHours()).slice(-2)
+        const mm = ('00' + date.getMinutes()).slice(-2)
+        this.picker.value = `${YYYY}-${MM}-${DD}T${hh}:${mm}`
+
+        this.text.value = hh === '00' && mm === '00'
+          ? `${YYYY}-${MM}-${DD}`
+          : `${YYYY}-${MM}-${DD} ${hh}:${mm}`
+        this.dispatchEvent(new Event('change'))
+        console.log('dispatch change')
       }
       constructor() {
         super()
-        // this.type = 'time'
-        this.type = 'date'
-        // this.type = 'datetime-local'
         const root = this.attachShadow({ mode: 'open' })
-        root.innerHTML = '<input />'
+        root.innerHTML = `
+          <style>
+            :host { position: relative; display: block; }
+            input { box-sizing: border-box; }
+            .picker { position: absolute; top: 2px; width: 100%; }
+            .text { position: sticky; width: calc(100% - 20px); }
+          </style>
+        `
+        const picker = document.createElement('input')
+        picker.type = 'datetime-local'
+        picker.classList.add('picker')
+        picker.addEventListener('change', () => this.value = picker.value)
+        this.picker = root.appendChild(picker)
+        const text = document.createElement('input')
+        text.classList.add('text')
+        text.addEventListener('change', () => this.value = text.value)
+        this.text = root.appendChild(text)
       }
     }
     customElements.define('input-date', InputDate)

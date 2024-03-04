@@ -2,7 +2,7 @@ FROM denoland/deno
 
 EXPOSE 443
 WORKDIR /app
-COPY localhost.crt localhost.key server.ts SSE.ts ./
-RUN deno cache server.ts
+COPY localhost.crt localhost.key server.ts store.ts negotiation.ts SSE.ts exec.ts events.ts indexer.ts PathNode.ts ./
+RUN deno cache --reload server.ts
 
 CMD ["run", "--allow-net", "--allow-read", "--allow-write", "--allow-env", "server.ts"]
