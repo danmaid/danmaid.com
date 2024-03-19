@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://danmaid.com/main.css" />
+</head>
+
+<body>
+  <div id="xxx"></div>
+  <script>
+    const xxx = document.getElementById('xxx')
+    const a = document.createElement('a')
+    a.href = '/'
+    a.textContent = location.host
+    xxx.insertAdjacentElement('beforeend', a)
+    location.pathname.split('/').forEach((v, i, arr) => {
+      if (!v) return
+      xxx.insertAdjacentHTML('beforeend', ' &raquo; ')
+      const a = document.createElement('a')
+      a.href = arr.slice(0, i + 1).join('/')
+      a.textContent = v
+      xxx.insertAdjacentElement('beforeend', a)
+    })
+  </script>
+  <table is="contents-table"></table>
+
+  <script>
+    class ContentsTable extends HTMLTableElement {
+      thead = this.createTHead()
+      tbody = this.createTBody()
+      tfoot = this.createTFoot()
+      constructor() {
+        super()
+        this.thead.insertAdjacentHTML('beforeend', `
+      <tr>
+        <th>name</th>
+        <th>size</th>
+        <th>mtime</th>
+        <td><button name="load">load</button></td>
+      </tr>
+    `)
+        this.tfoot.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td colspan="4"><button name="add">add</button></td>
+      </tr>
+      <tr>
+        <td colspan="4">
+          <input name="mkdir" /><button name="mkdir">mkdir</button>
+        </td>
+      </tr>
+    `)
+
+        this.addEventListener('click', (ev) => {
+          if (ev.target instanceof HTMLButtonElement) {
+            if (ev.target.name === 'load') return this.load()
+            if (ev.target.name === 'add') return this.add()
+            if (ev.target.name === 'mkdir') return this.mkdir()
+          }
+        })
+        this.load()
+      }
+
+      async load() {
+        const actions = this.thead.rows[0].cells[3]
+        const before = [...actions.childNodes]
+        actions.replaceChildren(document.createElement('progress'))
+        this.tbody.replaceChildren()
+        const res = await fetch('', { headers: { accept: 'application/json' } })
+        if (!res.ok) {
+          return actions.textContent = `${res.status} ${res.statusText}`
+        }
+        const items = await res.json()
+        if (items.length === 0) {
+          const row = this.tbody.insertRow()
+          const button = row.insertCell().appendChild(document.createElement('button'))
+          button.textContent = 'delete'
+          button.name = 'delete'
+          button.addEventListener('click', async () => {
+            button.replaceWith(document.createElement('progress'))
+            const res = await fetch('', { method: 'DELETE' })
+            await res.body?.cancel()
+            if (!res.ok) {
+              return button.replaceWith(`${res.status} ${res.statusText}`)
+            }
+            location.pathname = location.pathname.replace(/[^/]+\/?$/, '')
+          })
+
+        }
+        for (const { name, mtime, size, isDirectory } of items) {
+          const row = this.tbody.insertRow()
+          if (isDirectory) {
+            const a = row.insertCell().appendChild(document.createElement('a'))
+            a.textContent = name
+            a.href = name
+            row.insertCell()
+            row.insertCell().textContent = mtime
+            row.insertCell()
+          } else {
+            row.insertCell().textContent = name
+            row.insertCell().textContent = String(size)
+            row.insertCell().textContent = mtime
+            const update = document.createElement('button')
+            update.textContent = update.name = 'update'
+            update.addEventListener('click', () => this.update(row))
+            const remove = document.createElement('button')
+            remove.textContent = remove.name = 'delete'
+            remove.addEventListener('click', () => this.delete(row))
+            row.insertCell().append(update, remove)
+          }
+        }
+        actions.replaceChildren(...before)
+      }
+
+      async add() {
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.multiple = true
+        input.addEventListener('change', async () => {
+          for (const file of input.files) {
+            console.log('file', file)
+            const row = this.tfoot.insertRow()
+            row.insertCell().textContent = file.name
+            row.insertCell().textContent = String(file.size)
+            row.insertCell().textContent = new Date(file.lastModified).toISOString()
+            const actions = row.insertCell()
+            actions.append(document.createElement('progress'))
+
+            {
+              const res = await fetch(file.name, { method: 'HEAD' })
+              await res.body?.cancel()
+              if (res.ok) return actions.textContent = 'already exists.'
+            }
+
+            const res = await fetch(file.name, { method: 'PUT', body: file })
+            await res.body?.cancel()
+            if (res.ok) {
+              const update = document.createElement('button')
+              update.textContent = update.name = 'update'
+              update.addEventListener('click', () => this.update(row))
+              const remove = document.createElement('button')
+              remove.textContent = remove.name = 'delete'
+              remove.addEventListener('click', () => this.delete(row))
+              actions.replaceChildren(update, remove)
+              row.remove()
+              this.tbody.append(row)
+            } else {
+              actions.textContent = `${res.status} ${res.statusText}`
+            }
+          }
+        })
+        input.click()
+      }
+
+      async mkdir() {
+        const input = this.querySelector('input')
+        if (!input.value) return
+        const res = await fetch(input.value, { method: 'MKCOL' })
+        await res.body?.cancel()
+      }
+
+      async update(elem) {
+        const row = elem.closest('tr')
+        const name = row.cells[0].textContent
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.addEventListener('change', async () => {
+          row.cells[3].replaceChildren(document.createElement('progress'))
+          const file = input.files[0]
+          const res = await fetch(name, { method: 'PUT', body: file })
+          await res.body?.cancel()
+          if (!res.ok) {
+            return row.cells[3].textContent = `${res.status} ${res.statusText}`
+          }
+          row.cells[1].textContent = String(file.size)
+          row.cells[2].textContent = new Date(file.lastModified).toISOString()
+          const update = document.createElement('button')
+          update.textContent = update.name = 'update'
+          update.addEventListener('click', () => this.update(row))
+          const remove = document.createElement('button')
+          remove.textContent = remove.name = 'delete'
+          remove.addEventListener('click', () => this.delete(row))
+          row.cells[3].replaceChildren(update, remove)
+        })
+        input.click()
+      }
+
+      async delete(elem) {
+        const row = elem.closest('tr')
+        const name = row.cells[0].textContent
+        row.cells[3].replaceChildren(document.createElement('progress'))
+        const res = await fetch(name, { method: 'DELETE' })
+        await res.body?.cancel()
+        if (!res.ok) {
+          return row.cells[3].textContent = `${res.status} ${res.statusText}`
+        }
+        row.remove()
+      }
+    }
+
+    customElements.define('contents-table', ContentsTable, { extends: 'table' })
+  </script>
+</body>
+
+</html>
