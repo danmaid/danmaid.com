@@ -13,7 +13,10 @@ export class HttpDecoder extends Transform {
     if (this.headersEnd) return callback(null, chunk)
     try {
       const next = this.decode(Buffer.concat([this.next, chunk]))
-      if (this.headersEnd) return callback(null, next)
+      if (this.headersEnd) {
+        this.next = Buffer.from([])
+        return callback(null, next)
+      }
       this.next = next
       callback()
     } catch (err: any) {

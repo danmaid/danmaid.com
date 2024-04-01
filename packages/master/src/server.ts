@@ -40,13 +40,14 @@ const server = createSecureServer({ allowHTTP1: true }, async (req, res) => {
   if (req.method === 'GET' && req.headers.accept === 'application/http') {
     const session = sessions.get(req.url)
     if (!session) return res.writeHead(404).end()
+    res.writeHead(200, { 'content-type': 'application/http' })
     const { method, url, headers, body } = session
-    res.write(`${method} ${url} HTTP/1.1\r\n`)
+    await new Promise(r => res.write(`${method} ${url} HTTP/1.1\r\n`, r))
     for (const [k, v] of Object.entries(headers)) {
       if (k.startsWith(':')) continue
-      res.write(`${k}: ${v}\r\n`)
+      await new Promise(r => res.write(`${k}: ${v}\r\n`, r))
     }
-    res.write('\r\n')
+    await new Promise(r => res.write('\r\n', r))
     return Readable.from(body).pipe(res)
   }
 
