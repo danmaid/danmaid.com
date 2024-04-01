@@ -1,0 +1,10 @@
+services:
+  server:
+    image: danmaid/master
+    build: .
+    ports:
+      - 443:443
+    volumes:
+      - ./data:/app/data
+      - ./localhost.crt:/app/localhost.crt:ro
+      - ./localhost.key:/app/localhost.key:ro

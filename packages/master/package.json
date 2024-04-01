@@ -1,0 +1,26 @@
+{
+  "name": "@danmaid/master",
+  "version": "0.0.1",
+  "description": "",
+  "exports": {
+    ".": "./src/index.ts",
+    "./test-server": "./src/test-server.ts",
+    "./test-utils": "./src/test-utils.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node lib/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@tsconfig/node18": "^18.2.2",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.2"
+  }
+}
