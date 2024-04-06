@@ -1,8 +1,8 @@
-import { createSecureServer, Http2ServerResponse, IncomingHttpHeaders } from 'node:http2'
+import { createSecureServer, Http2ServerResponse } from 'node:http2'
 import { readFileSync } from 'node:fs'
-import { Readable } from 'node:stream'
 import { getItem } from './Item'
-import { HttpDecoder } from './HttpDecoder'
+import { Session } from './Session'
+import { Http2Decoder } from './Http2Decoder'
 
 const config = getItem('config', {
   key: readFileSync('./localhost.key', 'utf-8'),
@@ -12,43 +12,32 @@ const config = getItem('config', {
 })
 
 const slaves = new Set<Http2ServerResponse>()
-interface Session {
-  method: string
-  url: string
-  headers: IncomingHttpHeaders
-  body: Buffer
-  response: Http2ServerResponse
-}
 const sessions = new Map<string, Session>()
 
 const server = createSecureServer({ allowHTTP1: true }, async (req, res) => {
-  // response
-  if (req.method === 'POST' && req.headers['content-type'] === 'application/http') {
-    const session = sessions.get(req.url)
-    if (!session) return res.writeHead(404).end()
-    sessions.delete(req.url)
-    const { response } = session
-    const http = req.pipe(new HttpDecoder())
-    http.once('response', (status, headers) => {
-      headers.forEach((v, k) => response.setHeader(k, v))
-      response.writeHead(status)
-    })
-    return http.pipe(response)
-  }
-
-  // get pending request
-  if (req.method === 'GET' && req.headers.accept === 'application/http') {
-    const session = sessions.get(req.url)
-    if (!session) return res.writeHead(404).end()
-    res.writeHead(200, { 'content-type': 'application/http' })
-    const { method, url, headers, body } = session
-    await new Promise(r => res.write(`${method} ${url} HTTP/1.1\r\n`, r))
-    for (const [k, v] of Object.entries(headers)) {
-      if (k.startsWith(':')) continue
-      await new Promise(r => res.write(`${k}: ${v}\r\n`, r))
+  if (req.url.startsWith('/sessions')) {
+    if (req.method === 'GET' && req.headers.accept === 'application/json') {
+      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+      return res.end(JSON.stringify([...sessions]))
     }
-    await new Promise(r => res.write('\r\n', r))
-    return Readable.from(body).pipe(res)
+    const session = sessions.get(req.url)
+    if (!session) return res.writeHead(404).end()
+    if (req.method === 'POST' && req.headers['content-type'] === 'application/http') {
+      try {
+        const response = req.pipe(new Http2Decoder()).response()
+        session.respondWith(response)
+        const { headers } = await response
+        slaves.forEach(v => v.write(`event: response\ndata: ${JSON.stringify(headers)}\n\n`))
+        return res.end()
+      } catch {
+        return res.writeHead(500).end()
+      }
+    }
+    if (req.method === 'GET' && req.headers.accept === 'application/http') {
+      res.writeHead(200, { 'content-type': 'application/http', 'cache-control': 'no-store' })
+      return session.stream().pipe(res)
+    }
+    return res.writeHead(501).end()
   }
 
   // connect slave
@@ -67,24 +56,15 @@ const server = createSecureServer({ allowHTTP1: true }, async (req, res) => {
       return res.end(JSON.stringify([...slaves]))
     }
   }
-  if (req.url.startsWith('/sessions')) {
-    if (req.method === 'GET' && req.headers.accept === 'application/json') {
-      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
-      return res.end(JSON.stringify([...sessions]))
-    }
-  }
 
   // register request
-  const id = req.url + crypto.randomUUID()
-  const { method, url, headers } = req
-  const body = await new Promise<Buffer>((resolve) => {
-    const chunks: Buffer[] = []
-    req.on('data', (chunk: Buffer) => chunks.push(chunk))
-    req.on('end', () => resolve(Buffer.concat(chunks)))
-  })
-  sessions.set(id, { method, url, headers, body, response: res })
+  const id = '/sessions/' + crypto.randomUUID()
+  // const session = await Session.from(req, res)
+  const session = new Session(req, res)
+  res.once('close', () => setTimeout(() => sessions.delete(id), 5000))
+  sessions.set(id, session)
   slaves.forEach(v => v.write(`data: ${id}\n\n`))
-  res.setTimeout(5000, () => sessions.delete(id) && res.writeHead(501).end())
+  slaves.forEach(v => v.write(`event: request\ndata: ${JSON.stringify(req.headers)}\n\n`))
 })
 
 server.on('error', (...args) => console.log('error', ...args))

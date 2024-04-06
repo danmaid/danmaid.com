@@ -17,8 +17,8 @@ export interface Slave {
 export class Slave extends EventTarget {
   constructor() {
     super()
-    const session = connect('https://nanopi-r1.1.danmaid.com/', { ca, rejectUnauthorized: false })
-    // const session = connect('https://localhost', { ca })
+    // const session = connect('https://nanopi-r1.1.danmaid.com/', { ca, rejectUnauthorized: false })
+    const session = connect('https://localhost', { ca })
     const stream = session.request({ accept: 'text/event-stream' })
     const chunks: Buffer[] = []
     stream.on('data', async (chunk) => {
@@ -33,6 +33,7 @@ export class Slave extends EventTarget {
       const data = payload.match(/data: (.*)\n/)?.[1]
       const lastEventId = payload.match(/id: (.*)\n/)?.[1]
       if (!data) return console.warn('invalid data.', payload)
+      if (type) return
       this.dispatchEvent(new MessageEvent(type || 'message', { data, lastEventId }))
 
       const stream = session.request({ ':path': data, accept: 'application/http' })
@@ -41,16 +42,21 @@ export class Slave extends EventTarget {
         const event = RequestEvent.from(method, target, headers, http)
         this.dispatchEvent(event)
         if (event.response) {
-          const { status, headers, body } = await event.response
-          const stream = session.request({ ':path': data, ':method': 'POST', 'content-type': 'application/http' })
-          stream.write(`HTTP/1.1 ${status}\r\n`)
-          headers.forEach((v, k) => k.startsWith(':') || stream.write(`${k}: ${v}\r\n`))
-          stream.write('\r\n')
-          body ? body.pipe(stream) : stream.end()
+          try {
+            const { status, headers, body } = await event.response
+            const stream = session.request({ ':path': data, ':method': 'POST', 'content-type': 'application/http' })
+            stream.write(`HTTP/1.1 ${status}\r\n`)
+            headers.forEach((v, k) => k.startsWith(':') || stream.write(`${k}: ${v}\r\n`))
+            stream.write('\r\n')
+            body ? body.pipe(stream) : stream.end()
+          } catch (err) {
+            console.error(err)
+            const stream = session.request({ ':path': data, ':method': 'POST', 'content-type': 'application/http' })
+            stream.end(`HTTP/1.1 500\r\n\r\n${err}`)
+          }
         }
       })
     })
-
   }
 }
 
@@ -70,8 +76,8 @@ export class RequestEvent extends Event {
 export class Request {
   readonly url: string
   constructor(readonly method: string, url: string, readonly headers: Headers, readonly body: Readable) {
-    this.url = new URL(url, 'https://nanopi-r1.1.danmaid.com/').toString()
-    // this.url = new URL(url, 'https://localhost').toString()
+    // this.url = new URL(url, 'https://nanopi-r1.1.danmaid.com/').toString()
+    this.url = new URL(url, 'https://localhost').toString()
   }
 }
 

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://danmaid.com/main.css" />
+  <style>
+    div {
+      border-bottom: 1px solid;
+    }
+  </style>
+</head>
+
+<body>
+  <script>
+    const master = new EventSource('')
+    master.addEventListener('request', (ev) => add(ev.data))
+    master.addEventListener('response', (ev) => add(ev.data))
+
+    function add(text) {
+      document.body.appendChild(document.createElement('div')).textContent = text
+    }
+  </script>
+</body>
+
+</html>
