@@ -17,8 +17,8 @@ export interface Slave {
 export class Slave extends EventTarget {
   constructor() {
     super()
-    // const session = connect('https://nanopi-r1.1.danmaid.com/', { ca, rejectUnauthorized: false })
-    const session = connect('https://localhost', { ca })
+    const session = connect('https://nanopi-r1.1.danmaid.com/', { ca, rejectUnauthorized: false })
+    // const session = connect('https://localhost', { ca })
     const stream = session.request({ accept: 'text/event-stream' })
     const chunks: Buffer[] = []
     stream.on('data', async (chunk) => {
@@ -76,8 +76,8 @@ export class RequestEvent extends Event {
 export class Request {
   readonly url: string
   constructor(readonly method: string, url: string, readonly headers: Headers, readonly body: Readable) {
-    // this.url = new URL(url, 'https://nanopi-r1.1.danmaid.com/').toString()
-    this.url = new URL(url, 'https://localhost').toString()
+    this.url = new URL(url, 'https://nanopi-r1.1.danmaid.com/').toString()
+    // this.url = new URL(url, 'https://localhost').toString()
   }
 }
 

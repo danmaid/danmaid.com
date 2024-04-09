@@ -1,0 +1,3 @@
+import { getResource } from './Resource'
+
+
